@@ -3,10 +3,17 @@ import { Outlet } from "react-router-dom";
 
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import ProfileSettingsModal from "./ProfileSettingsModal";
 
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [accountView, setAccountView] = useState(null);
+
+  function openAccountView(view) {
+    setMobileMenu(false);
+    setAccountView(view);
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -17,6 +24,7 @@ export default function DashboardLayout() {
         <Sidebar
           collapsed={collapsed}
           onToggle={() => setCollapsed((current) => !current)}
+          onSettings={() => openAccountView("settings")}
         />
       </div>
 
@@ -47,7 +55,11 @@ export default function DashboardLayout() {
           ${mobileMenu ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <Sidebar collapsed={false} onToggle={() => setMobileMenu(false)} />
+        <Sidebar
+          collapsed={false}
+          onToggle={() => setMobileMenu(false)}
+          onSettings={() => openAccountView("settings")}
+        />
       </div>
 
       {/* =========================
@@ -56,7 +68,11 @@ export default function DashboardLayout() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Header tidak ikut scroll */}
         <div className="shrink-0">
-          <Header onMobileMenu={() => setMobileMenu(true)} />
+          <Header
+            onMobileMenu={() => setMobileMenu(true)}
+            onProfile={() => openAccountView("profile")}
+            onSettings={() => openAccountView("settings")}
+          />
         </div>
 
         {/* Hanya area ini yang scroll */}
@@ -66,6 +82,12 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      <ProfileSettingsModal
+        open={Boolean(accountView)}
+        view={accountView}
+        onClose={() => setAccountView(null)}
+      />
     </div>
   );
 }

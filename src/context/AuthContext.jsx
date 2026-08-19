@@ -11,33 +11,46 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-
   const [token, setToken] = useState(null);
 
+  /*
+   * true selama session belum selesai
+   * dipulihkan dari storage.
+   */
   const [loading, setLoading] = useState(true);
 
-  /*
-   * Restore session saat aplikasi
-   * pertama kali dibuka.
-   */
   useEffect(() => {
-    const storedToken = getAccessToken();
+    function restoreSession() {
+      try {
+        const storedToken = getAccessToken();
+        const storedUser = getStoredUser();
 
-    const storedUser = getStoredUser();
+        if (storedToken && storedUser && storedUser.role === "mentor") {
+          setToken(storedToken);
+          setUser(storedUser);
+        } else {
+          clearAuthSession();
 
-    if (storedToken && storedUser && storedUser.role === "mentor") {
-      setToken(storedToken);
-      setUser(storedUser);
-    } else {
-      clearAuthSession();
+          setToken(null);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Failed to restore auth session:", error);
+
+        clearAuthSession();
+
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setLoading(false);
+    restoreSession();
   }, []);
 
   /*
-   * Tangani session yang invalid
-   * dari API client.
+   * Tangani session invalid dari API client.
    */
   useEffect(() => {
     function handleUnauthorized() {
@@ -55,9 +68,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   function loginSession(accessToken, userData) {
-    /*
-     * Safety check tambahan.
-     */
     if (userData?.role !== "mentor") {
       throw new Error("Hanya akun mentor yang dapat login.");
     }
@@ -78,14 +88,26 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  function updateUser(userData) {
+    const nextUser = { ...user, ...userData };
+
+    saveAuthSession({
+      access_token: token,
+      user: nextUser,
+    });
+
+    setUser(nextUser);
+  }
+
+  const isAuthenticated = Boolean(token && user);
+
   const value = {
     user,
     token,
     loading,
-
-    isAuthenticated: Boolean(token && user),
-
+    isAuthenticated,
     loginSession,
+    updateUser,
     logout,
   };
 

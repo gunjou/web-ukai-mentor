@@ -231,6 +231,41 @@ export default function useDashboard() {
 
   /*
    * ==========================================
+   * TODAY ATTENDANCE META
+   * ==========================================
+   *
+   * Agregasi data attendance hanya untuk
+   * jadwal hari ini.
+   */
+
+  const todayAttendanceMeta = useMemo(() => {
+    const today = getTodayDate();
+
+    const todayResults = attendanceBySchedule.filter((item) => {
+      const effectiveDate =
+        item.schedule.tanggal_efektif || item.schedule.tanggal;
+
+      return effectiveDate === today;
+    });
+
+    if (todayResults.length === 0) {
+      return emptyMeta();
+    }
+
+    // Agregasi semua meta dari jadwal hari ini
+    return todayResults.reduce((acc, item) => {
+      return {
+        total: acc.total + item.meta.total,
+        hadir: acc.hadir + item.meta.hadir,
+        izin: acc.izin + item.meta.izin,
+        sakit: acc.sakit + item.meta.sakit,
+        alpha: acc.alpha + item.meta.alpha,
+      };
+    }, emptyMeta());
+  }, [attendanceBySchedule]);
+
+  /*
+   * ==========================================
    * ATTENDANCE TREND
    * ==========================================
    *
@@ -318,6 +353,9 @@ export default function useDashboard() {
 
     attendanceBySchedule,
     attendanceTrend,
+
+    todayAttendanceMeta,
+    hasScheduleToday: todaySchedules.length > 0,
 
     loading,
     error,

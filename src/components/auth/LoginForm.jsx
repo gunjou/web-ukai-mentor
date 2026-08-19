@@ -1,4 +1,4 @@
-import { LockKeyhole, Mail, LogIn } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, LogIn } from "lucide-react";
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -16,8 +16,10 @@ export default function LoginForm() {
   const navigate = useNavigate();
   const toast = useToast();
   const { loginSession } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +40,9 @@ export default function LoginForm() {
 
     try {
       setLoading(true);
+
       const response = await login(email.trim(), password);
+
       /*
        * Hanya role mentor
        * yang diperbolehkan masuk.
@@ -53,15 +57,10 @@ export default function LoginForm() {
 
       const userData = {
         id_user: response.id_user,
-
         nama: response.nama,
-
         email: response.email,
-
         role: response.role,
-
         id_paketkelas: response.id_paketkelas,
-
         nama_kelas: response.nama_kelas,
       };
 
@@ -100,11 +99,35 @@ export default function LoginForm() {
 
       <Input
         label="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         placeholder="Masukkan password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         leftIcon={<LockKeyhole size={17} />}
+        rightIcon={
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            disabled={loading}
+            aria-label={
+              showPassword ? "Sembunyikan password" : "Lihat password"
+            }
+            className="
+              rounded-md
+              p-1
+              text-foreground-muted
+              transition
+              hover:text-foreground
+              focus:outline-none
+              focus:ring-2
+              focus:ring-primary-500/30
+              disabled:pointer-events-none
+              disabled:opacity-50
+            "
+          >
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        }
         disabled={loading}
         autoComplete="current-password"
       />

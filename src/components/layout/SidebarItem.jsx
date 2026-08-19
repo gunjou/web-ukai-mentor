@@ -9,6 +9,12 @@ export default function SidebarItem({ item, collapsed = false }) {
     <NavLink
       to={item.href}
       end={item.href === "/"}
+      onClick={(event) => {
+        if (item.onClick) {
+          event.preventDefault();
+          item.onClick();
+        }
+      }}
       title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cn(

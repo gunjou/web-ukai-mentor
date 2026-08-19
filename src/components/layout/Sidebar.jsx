@@ -5,7 +5,7 @@ import SidebarItem from "./SidebarItem";
 
 import { cn } from "../../utils/cn";
 
-export default function Sidebar({ collapsed = false, onToggle }) {
+export default function Sidebar({ collapsed = false, onToggle, onSettings }) {
   return (
     <aside
       className={cn(
@@ -84,7 +84,14 @@ export default function Sidebar({ collapsed = false, onToggle }) {
       >
         <div className="space-y-1">
           {bottomNavigation.map((item) => (
-            <SidebarItem key={item.href} item={item} collapsed={collapsed} />
+            <SidebarItem
+              key={item.href}
+              item={{
+                ...item,
+                onClick: item.label === "Pengaturan" ? onSettings : undefined,
+              }}
+              collapsed={collapsed}
+            />
           ))}
         </div>
       </div>

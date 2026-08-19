@@ -5,13 +5,7 @@ import LoginForm from "../components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <div
-      className="
-        min-h-screen
-        bg-background
-        text-foreground
-      "
-    >
+    <div className="min-h-screen bg-background text-foreground">
       <div className="grid min-h-screen lg:grid-cols-2">
         {/* BRANDING */}
 
@@ -60,29 +54,20 @@ export default function LoginPage() {
               xl:p-14
             "
           >
+            {/* LOGO DESKTOP */}
             <div>
-              <div className="flex items-center gap-3">
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-white
-                    text-primary-600
-                  "
-                >
-                  A
-                </div>
-
-                <div>
-                  <p className="font-bold text-white">Attendly</p>
-
-                  <p className="text-xs text-white/70">Attendance System</p>
-                </div>
-              </div>
+              <img
+                src="/logo_horizontal.svg"
+                alt="Attendly"
+                className="
+                  h-12
+                  w-auto
+                  rounded-sm
+                  bg-white
+                  object-contain
+                  xl:h-14
+                "
+              />
             </div>
 
             <div className="max-w-lg">
@@ -124,7 +109,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-xs text-white/50">
-              © 2026 Attendly. All rights reserved.
+              © 2026 OutlookProject. All rights reserved.
             </p>
           </div>
         </div>
@@ -134,41 +119,35 @@ export default function LoginPage() {
         <div
           className="
             flex
+            min-h-screen
             items-center
             justify-center
             px-5
-            py-10
+            py-8
             sm:px-8
+            sm:py-10
+            lg:min-h-0
             lg:px-12
           "
         >
           <div className="w-full max-w-md">
+            {/* LOGO MOBILE */}
             <div className="mb-8 lg:hidden">
-              <div className="flex items-center gap-3">
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-primary-500
-                    font-bold
-                    text-white
-                  "
-                >
-                  A
-                </div>
-
-                <div>
-                  <p className="font-bold">Attendly</p>
-
-                  <p className="text-xs text-foreground-muted">
-                    Attendance System
-                  </p>
-                </div>
-              </div>
+              <img
+                src="/logo_horizontal.svg"
+                alt="Attendly"
+                className="
+                  mx-auto
+                  h-12
+                  w-auto
+                  max-w-[180px]
+                  rounded-sm
+                  
+                  object-contain
+                  sm:h-14
+                  sm:max-w-[200px]
+                "
+              />
             </div>
 
             <Card className="p-6 sm:p-8">

@@ -47,7 +47,7 @@ const pageTitles = {
   },
 };
 
-export default function Header({ onMobileMenu }) {
+export default function Header({ onMobileMenu, onProfile, onSettings }) {
   const location = useLocation();
 
   const page = getPageMeta(location.pathname, pageTitles);
@@ -90,7 +90,7 @@ export default function Header({ onMobileMenu }) {
         <ThemeToggle size="sm" />
 
         <div className="ml-1">
-          <UserMenu name="Admin" role="Administrator" initials="AD" />
+          <UserMenu onProfile={onProfile} onSettings={onSettings} />
         </div>
       </div>
     </header>

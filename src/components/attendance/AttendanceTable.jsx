@@ -9,12 +9,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  X,
   MapPin,
 } from "lucide-react";
 
 import Card from "../ui/Card";
 import Button from "../ui/Button";
+import AttendanceModal from "./AttendanceModal";
 
 import { formatDateTime } from "../../utils/date";
 
@@ -32,63 +32,36 @@ export default function AttendanceTable({
   onRefresh,
 }) {
   const toast = useToast();
-
   const [search, setSearch] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
-
   const [itemsPerPage, setItemsPerPage] = useState(5);
-
   const [modal, setModal] = useState(null);
-
   const [selectedParticipant, setSelectedParticipant] = useState(null);
-
   const [selectedStatus, setSelectedStatus] = useState("HADIR");
-
   const [submitting, setSubmitting] = useState(false);
-
   const [actionError, setActionError] = useState("");
 
-  /*
-   * ==========================================
-   * RESET PAGE WHEN SEARCH CHANGES
-   * ==========================================
-   */
+  //RESET PAGE WHEN SEARCH CHANGES
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
 
-  /*
-   * ==========================================
-   * RESET PAGE WHEN LIMIT CHANGES
-   * ==========================================
-   */
-
+  // RESET PAGE WHEN LIMIT CHANGES
   useEffect(() => {
     setCurrentPage(1);
   }, [itemsPerPage]);
 
-  /*
-   * ==========================================
-   * SEARCH
-   * ==========================================
-   */
-
+  //SEARCH
   const filteredParticipants = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-
     if (!keyword) {
       return participants;
     }
-
     return participants.filter((participant) => {
       const nama = String(participant.nama || "").toLowerCase();
-
       const nickname = String(participant.nickname || "").toLowerCase();
-
       const idPeserta = String(participant.id_peserta || "");
-
       return (
         nama.includes(keyword) ||
         nickname.includes(keyword) ||
@@ -97,22 +70,13 @@ export default function AttendanceTable({
     });
   }, [participants, search]);
 
-  /*
-   * ==========================================
-   * PAGINATION
-   * ==========================================
-   */
-
+  // PAGINATION
   const totalPages = Math.max(
     1,
     Math.ceil(filteredParticipants.length / itemsPerPage)
   );
 
-  /*
-   * Pastikan current page tidak melebihi
-   * jumlah halaman setelah data berubah.
-   */
-
+  //Pastikan current page tidak melebihi jumlah halaman setelah data berubah.
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
@@ -123,32 +87,18 @@ export default function AttendanceTable({
     return filteredParticipants.slice(start, start + itemsPerPage);
   }, [filteredParticipants, currentPage, itemsPerPage]);
 
-  /*
-   * ==========================================
-   * PAGE NUMBERS
-   * ==========================================
-   */
-
+  //PAGE NUMBERS
   const pageNumbers = useMemo(() => {
     const pages = [];
-
     const start = Math.max(1, currentPage - 2);
-
     const end = Math.min(totalPages, currentPage + 2);
-
     for (let page = start; page <= end; page++) {
       pages.push(page);
     }
-
     return pages;
   }, [currentPage, totalPages]);
 
-  /*
-   * ==========================================
-   * AVAILABLE PARTICIPANTS
-   * ==========================================
-   */
-
+  //AVAILABLE PARTICIPANTS
   const availableParticipants = useMemo(() => {
     return participants.filter((participant) => !participant.sudah_absen);
   }, [participants]);
@@ -993,283 +943,6 @@ function AttendanceRow({ participant, index, onEdit, onDelete, submitting }) {
         )}
       </td>
     </tr>
-  );
-}
-
-/*
- * ==========================================
- * MODAL
- * ==========================================
- */
-
-function AttendanceModal({
-  mode,
-  participant,
-  participants,
-  status,
-  setStatus,
-  onParticipantChange,
-  submitting,
-  error,
-  onClose,
-  onSubmit,
-}) {
-  const isCreate = mode === "create";
-
-  return (
-    <div
-      className="
-        fixed
-        inset-0
-        z-50
-        flex
-        items-center
-        justify-center
-        bg-black/40
-        p-4
-      "
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="
-          w-full
-          max-w-md
-          rounded-2xl
-          border
-          border-border
-          bg-card
-          shadow-xl
-        "
-      >
-        {/* HEADER */}
-
-        <div
-          className="
-            flex
-            items-center
-            justify-between
-            border-b
-            border-border
-            px-5
-            py-4
-          "
-        >
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {isCreate ? "Tambah Absen Manual" : "Ubah Kehadiran"}
-            </h3>
-
-            <p className="mt-0.5 text-xs text-foreground-muted">
-              {isCreate
-                ? "Tambahkan kehadiran peserta secara manual."
-                : "Ubah status kehadiran peserta."}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="
-              rounded-lg
-              p-1.5
-              text-foreground-muted
-              hover:bg-background-tertiary
-              hover:text-foreground
-            "
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* BODY */}
-
-        <div className="space-y-4 p-5">
-          {/* PESERTA */}
-
-          {isCreate ? (
-            <div>
-              <label
-                className="
-                  mb-1.5
-                  block
-                  text-xs
-                  font-medium
-                  text-foreground-secondary
-                "
-              >
-                Peserta
-              </label>
-
-              <select
-                value={participant?.id_peserta || ""}
-                onChange={(event) => {
-                  const selected = participants.find(
-                    (item) => String(item.id_peserta) === event.target.value
-                  );
-
-                  onParticipantChange(selected || null);
-                }}
-                disabled={submitting || participants.length === 0}
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-border
-                  bg-card
-                  px-3
-                  py-2.5
-                  text-sm
-                  text-foreground
-                  outline-none
-                  focus:border-primary
-                "
-              >
-                <option value="">Pilih peserta</option>
-
-                {participants.map((item) => (
-                  <option key={item.id_peserta} value={item.id_peserta}>
-                    {item.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div
-              className="
-                rounded-xl
-                border
-                border-border
-                bg-background-tertiary
-                p-3
-              "
-            >
-              <p
-                className="
-                  text-[10px]
-                  uppercase
-                  tracking-wide
-                  text-foreground-muted
-                "
-              >
-                Peserta
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-foreground">
-                {participant?.nama || "-"}
-              </p>
-
-              {participant?.nickname && (
-                <p className="mt-0.5 text-xs text-foreground-muted">
-                  @{participant.nickname}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* STATUS */}
-
-          <div>
-            <label
-              className="
-                mb-1.5
-                block
-                text-xs
-                font-medium
-                text-foreground-secondary
-              "
-            >
-              Status Kehadiran
-            </label>
-
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              disabled={submitting}
-              className="
-                w-full
-                rounded-lg
-                border
-                border-border
-                bg-card
-                px-3
-                py-2.5
-                text-sm
-                text-foreground
-                outline-none
-                focus:border-primary
-              "
-            >
-              <option value="HADIR">Hadir</option>
-
-              <option value="IZIN">Izin</option>
-
-              <option value="SAKIT">Sakit</option>
-
-              <option value="ALPHA">Alpha</option>
-            </select>
-          </div>
-
-          {/* ERROR */}
-
-          {error && (
-            <div
-              className="
-                rounded-lg
-                border
-                border-danger/20
-                bg-danger-light
-                px-3
-                py-2
-                text-xs
-                text-danger
-              "
-            >
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* FOOTER */}
-
-        <div
-          className="
-            flex
-            justify-end
-            gap-2
-            border-t
-            border-border
-            px-5
-            py-4
-          "
-        >
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            Batal
-          </Button>
-
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting || (isCreate && !participant)}
-          >
-            {submitting
-              ? "Menyimpan..."
-              : isCreate
-              ? "Tambah Absen"
-              : "Simpan Perubahan"}
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }
 

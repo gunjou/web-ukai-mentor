@@ -57,24 +57,6 @@ export default function SchedulePage() {
 
       console.log("SCHEDULE API RESPONSE:", response);
 
-      /*
-       * Bisa menangani:
-       *
-       * fetch:
-       * {
-       *   status: "success",
-       *   data: [...]
-       * }
-       *
-       * axios:
-       * {
-       *   data: {
-       *     status: "success",
-       *     data: [...]
-       *   }
-       * }
-       */
-
       const result = response?.data ?? response;
 
       const data = Array.isArray(result)
@@ -223,7 +205,6 @@ export default function SchedulePage() {
           ===================================== */}
 
       <AppPageHeader
-        icon={CalendarDays}
         title="Jadwal Pertemuan"
         description="Kelola dan pantau jadwal pertemuan kelas."
         action={

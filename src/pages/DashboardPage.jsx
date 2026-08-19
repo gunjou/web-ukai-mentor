@@ -24,17 +24,32 @@ export default function DashboardPage() {
 
     attendanceTrend,
 
+    todayAttendanceMeta,
+    hasScheduleToday,
+
     loading,
     error,
 
     refresh,
   } = useDashboard();
 
-  const total = attendanceMeta.total;
-  const hadir = attendanceMeta.hadir;
-  const izin = attendanceMeta.izin;
-  const sakit = attendanceMeta.sakit;
-  const alpha = attendanceMeta.alpha;
+  // Tentukan data yang akan ditampilkan
+  let total, hadir, izin, sakit, alpha;
+
+  if (hasScheduleToday) {
+    total = todayAttendanceMeta.total;
+    hadir = todayAttendanceMeta.hadir;
+    izin = todayAttendanceMeta.izin;
+    sakit = todayAttendanceMeta.sakit;
+    alpha = todayAttendanceMeta.alpha;
+  } else {
+    // Ketika tidak ada jadwal hari ini, gunakan "-"
+    total = "-";
+    hadir = "-";
+    izin = "-";
+    sakit = "-";
+    alpha = "-";
+  }
 
   /*
    * Terlambat belum tersedia dari API.
@@ -43,7 +58,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <WelcomeHeader name={selectedSchedule?.nickname_mentor || "Mentor"} />{" "}
+      <WelcomeHeader name={selectedSchedule?.nickname_mentor || "Mentor"} />
       {/* ======================================
           ERROR
           ====================================== */}
@@ -93,7 +108,11 @@ export default function DashboardPage() {
             <AttendanceStatCard
               title="Total Peserta"
               value={total}
-              description="Peserta pada jadwal"
+              description={
+                hasScheduleToday
+                  ? "Peserta pada jadwal hari ini"
+                  : "Tidak ada jadwal hari ini"
+              }
               icon={Users}
               color="primary"
             />
@@ -101,15 +120,23 @@ export default function DashboardPage() {
             <AttendanceStatCard
               title="Hadir"
               value={hadir}
-              description="Kehadiran peserta"
+              description={
+                hasScheduleToday
+                  ? "Kehadiran peserta"
+                  : "Tidak ada jadwal hari ini"
+              }
               icon={UserCheck}
               color="success"
             />
 
             <AttendanceStatCard
               title="Izin / Sakit"
-              value={izin + sakit}
-              description={`${izin} izin · ${sakit} sakit`}
+              value={hasScheduleToday ? `${izin} · ${sakit}` : "-"}
+              description={
+                hasScheduleToday
+                  ? `${izin} izin · ${sakit} sakit`
+                  : "Tidak ada jadwal hari ini"
+              }
               icon={Clock3}
               color="warning"
             />
@@ -117,7 +144,9 @@ export default function DashboardPage() {
             <AttendanceStatCard
               title="Tidak Hadir"
               value={alpha}
-              description="Peserta alpha"
+              description={
+                hasScheduleToday ? "Peserta alpha" : "Tidak ada jadwal hari ini"
+              }
               icon={UserX}
               color="danger"
             />
