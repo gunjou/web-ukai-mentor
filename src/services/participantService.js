@@ -17,3 +17,35 @@ export async function getClassParticipants(id_paketkelas) {
 
   return response?.data || [];
 }
+
+export async function getTryoutArrearsMonitoring(id_paketkelas, id_user) {
+  if (!id_paketkelas) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    id_paketkelas: String(id_paketkelas),
+  });
+
+  if (id_user) {
+    params.set("id_user", String(id_user));
+  }
+
+  const response = await api(`/tryout/tunggakan/monitoring?${params}`);
+
+  return response?.data ?? response ?? [];
+}
+
+export async function getMateriProgressMonitoring(id_paketkelas) {
+  if (!id_paketkelas) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    id_paketkelas: String(id_paketkelas),
+  });
+
+  const response = await api(`/materi/progress/monitoring?${params}`);
+
+  return response?.data ?? response ?? [];
+}

@@ -9,6 +9,8 @@ import MentorAttendancePage from "./pages/MentorAttendancePage";
 import LoginPage from "./pages/LoginPage";
 import SchedulePage from "./pages/SchedulePage";
 import PesertaPage from "./pages/PesertaPage";
+import TryoutArrearsPage from "./pages/TryoutArrearsPage";
+import MateriProgressPage from "./pages/MateriProgressPage";
 
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -66,6 +68,10 @@ function AppRoutes() {
           <Route path="/schedules" element={<SchedulePage />} />
 
           <Route path="/participants" element={<PesertaPage />} />
+
+          <Route path="/tryout-arrears" element={<TryoutArrearsPage />} />
+
+          <Route path="/materi-progress" element={<MateriProgressPage />} />
         </Route>
       </Route>
 

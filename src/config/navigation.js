@@ -6,6 +6,8 @@ import {
   UserCheck,
   CalendarCheck,
   ClipboardCheck,
+  ClipboardList,
+  BookOpenCheck,
   FileBarChart,
   Settings,
 } from "lucide-react";
@@ -35,6 +37,16 @@ export const mainNavigation = [
     label: "Participants",
     href: "/participants",
     icon: Users,
+  },
+  {
+    label: "Materi Progress",
+    href: "/materi-progress",
+    icon: BookOpenCheck,
+  },
+  {
+    label: "Tryout Arrears",
+    href: "/tryout-arrears",
+    icon: ClipboardList,
   },
   // {
   //   label: "Izin & Cuti",

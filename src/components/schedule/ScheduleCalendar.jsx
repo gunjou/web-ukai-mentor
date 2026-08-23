@@ -490,7 +490,8 @@ export default function ScheduleCalendar({
                     "lg:min-h-[165px]",
                     "lg:p-2",
 
-                    !isCurrentMonth && "bg-background/60",
+                    !isCurrentMonth &&
+                      "bg-background-secondary dark:bg-background",
 
                     isSelected &&
                       "ring-1 ring-inset ring-primary-500/40 dark:ring-primary-400/30"

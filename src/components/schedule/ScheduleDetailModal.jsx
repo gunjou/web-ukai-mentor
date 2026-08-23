@@ -5,6 +5,7 @@ import {
   UserRound,
   Video,
   CalendarClock,
+  FileText,
 } from "lucide-react";
 
 import {
@@ -139,6 +140,14 @@ export default function ScheduleDetailModal({
           icon={UserRound}
           label="Nickname mentor"
           value={schedule.nickname_mentor || "-"}
+        />
+
+        <InfoRow icon={FileText} label="Topik" value={schedule.topik || "-"} />
+
+        <InfoRow
+          icon={FileText}
+          label="Catatan"
+          value={schedule.catatan || "-"}
         />
       </div>
 

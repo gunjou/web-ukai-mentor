@@ -54,7 +54,7 @@ export default function ScheduleEvent({ schedule, onClick }) {
               bg-primary-100
               text-primary-700
               dark:bg-primary-900/30
-              dark:text-primary-300
+              dark:text-primary-500
             `
         }
       `}
@@ -131,8 +131,20 @@ export default function ScheduleEvent({ schedule, onClick }) {
           </p>
 
           {/* =====================================
-              MENTOR
+              TOPIC AND NOTES
               ===================================== */}
+
+          <p
+            className="
+              mt-1
+              truncate
+              text-[9px]
+              font-medium
+              opacity-70
+            "
+          >
+            Topik: {schedule.topik || "-"}
+          </p>
 
           <p
             className="
@@ -142,7 +154,7 @@ export default function ScheduleEvent({ schedule, onClick }) {
               opacity-70
             "
           >
-            {schedule.nickname_mentor || schedule.nama_mentor || "Tanpa mentor"}
+            Catatan: {schedule.catatan || "-"}
           </p>
         </div>
       </div>

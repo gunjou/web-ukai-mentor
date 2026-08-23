@@ -33,6 +33,12 @@ const pageTitles = {
     title: "Participants",
     description: "Daftar peserta kelas",
   },
+  "/materi-progress": {
+    title: "Materi Progress",
+  },
+  "/tryout-arrears": {
+    title: "Tryout Arrears",
+  },
   "/leave": {
     title: "Izin & Cuti",
     description: "Kelola pengajuan izin dan cuti",
