@@ -1,5 +1,6 @@
 import { clearAuthSession, getAccessToken } from "./auth";
 
+// const API_URL = "http://127.0.0.1:5000";
 const API_URL = process.env.REACT_APP_API_URL;
 
 export async function api(endpoint, options = {}) {
@@ -73,7 +74,7 @@ export async function api(endpoint, options = {}) {
    */
   if (!response.ok) {
     const error = new Error(
-      data?.message || data?.msg || "Terjadi kesalahan pada server."
+      data?.message || data?.msg || "Terjadi kesalahan pada server.",
     );
 
     error.status = response.status;

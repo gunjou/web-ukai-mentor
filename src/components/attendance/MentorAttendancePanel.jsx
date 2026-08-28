@@ -104,6 +104,11 @@ export default function MentorAttendancePanel({
 
   const completed = attendanceStatus === "completed";
 
+  const isOnline =
+    String(schedule.type_pertemuan || "").toUpperCase() === "ONLINE";
+
+  const isOffline = !isOnline;
+
   /*
    * ==========================================
    * RENDER
@@ -218,6 +223,7 @@ export default function MentorAttendancePanel({
                 submitting={submitting}
                 location={location}
                 evidence={evidence}
+                isOnline={isOnline}
                 canCheckOut={timeStatus.canCheckOut}
                 onCheckOut={onCheckOut}
               />
@@ -226,6 +232,7 @@ export default function MentorAttendancePanel({
                 submitting={submitting}
                 location={location}
                 evidence={evidence}
+                isOnline={isOnline}
                 canCheckIn={timeStatus.canCheckIn}
                 onCheckIn={onCheckIn}
               />
@@ -240,6 +247,7 @@ export default function MentorAttendancePanel({
               evidence={evidence}
               timeStatus={timeStatus}
               checkedIn={checkedIn}
+              isOnline={isOnline}
             />
           </>
         )}
@@ -464,7 +472,7 @@ function LocationSection({
           >
             {location
               ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
-                  6
+                  6,
                 )}`
               : "Lokasi belum diambil"}
           </p>
@@ -619,7 +627,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
       if (error?.name === "NotAllowedError") {
         setCameraError(
-          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan."
+          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan.",
         );
       } else if (error?.name === "NotFoundError") {
         setCameraError("Kamera tidak ditemukan pada perangkat ini.");
@@ -627,7 +635,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         setCameraError("Kamera sedang digunakan aplikasi lain.");
       } else {
         setCameraError(
-          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera."
+          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera.",
         );
       }
     }
@@ -725,7 +733,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         stopCamera();
       },
       "image/jpeg",
-      0.9
+      0.9,
     );
   };
 
@@ -1117,15 +1125,18 @@ function CheckInButton({
   submitting,
   location,
   evidence,
+  isOnline,
   canCheckIn,
   onCheckIn,
 }) {
+  const missingRequiredData = !isOnline && (!location || !evidence);
+
   return (
     <Button
       type="button"
       className="w-full"
       onClick={onCheckIn}
-      disabled={submitting || !canCheckIn || !location || !evidence}
+      disabled={submitting || !canCheckIn || missingRequiredData}
     >
       <LogIn size={16} />
 
@@ -1144,16 +1155,19 @@ function CheckOutButton({
   submitting,
   location,
   evidence,
+  isOnline,
   canCheckOut,
   onCheckOut,
 }) {
+  const missingRequiredData = !isOnline && (!location || !evidence);
+
   return (
     <Button
       type="button"
       variant="danger"
       className="w-full"
       onClick={onCheckOut}
-      disabled={submitting || !location || !evidence || !canCheckOut}
+      disabled={submitting || !canCheckOut || missingRequiredData}
     >
       <LogOut size={16} />
 
@@ -1168,18 +1182,28 @@ function CheckOutButton({
  * ==========================================
  */
 
-function AttendanceHelper({ location, evidence, timeStatus, checkedIn }) {
+function AttendanceHelper({
+  location,
+  evidence,
+  timeStatus,
+  checkedIn,
+  isOnline,
+}) {
   let message;
 
-  if (!location) {
-    message = "Ambil lokasi terlebih dahulu.";
-  } else if (!evidence) {
-    message = "Ambil foto evidence terlebih dahulu.";
-  } else if (timeStatus.status === "upcoming") {
+  if (timeStatus.status === "upcoming") {
     message = "Tombol check-in aktif saat jadwal dimulai.";
   } else if (checkedIn) {
+    message = isOnline
+      ? "Anda sudah check-in. Lakukan check-out setelah selesai mengajar."
+      : "Anda sudah check-in. Pastikan lokasi dan foto tersedia untuk check-out.";
+  } else if (!isOnline && !location) {
+    message = "Ambil lokasi terlebih dahulu.";
+  } else if (!isOnline && !evidence) {
+    message = "Ambil foto evidence terlebih dahulu.";
+  } else if (isOnline) {
     message =
-      "Anda sudah check-in. Lakukan check-out setelah selesai mengajar.";
+      "Lokasi dan foto evidence bersifat opsional untuk pertemuan online.";
   } else {
     message = "Semua data siap untuk melakukan absensi.";
   }

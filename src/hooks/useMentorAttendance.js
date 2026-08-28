@@ -13,20 +13,27 @@ import { getScheduleStartTime, getScheduleEndTime } from "../utils/schedule";
 
 export default function useMentorAttendance() {
   const toast = useToast();
+
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
+
   const [evidence, setEvidence] = useState(null);
+
   const [attendanceStatus, setAttendanceStatus] = useState("idle");
   const [attendanceDetail, setAttendanceDetail] = useState(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+
   const [checkInData, setCheckInData] = useState(null);
   const [checkOutData, setCheckOutData] = useState(null);
+
   const [now, setNow] = useState(() => new Date());
+
   /*
    * ==========================================
    * CLOCK
@@ -59,8 +66,8 @@ export default function useMentorAttendance() {
       const data = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-        ? result.data
-        : [];
+          ? result.data
+          : [];
 
       setSchedules(data);
     } catch (err) {
@@ -80,9 +87,6 @@ export default function useMentorAttendance() {
    * ==========================================
    * INITIAL LOAD
    * ==========================================
-   *
-   * Jangan menggunakan loadSchedules sebagai
-   * dependency effect jika useToast() tidak stabil.
    */
 
   useEffect(() => {
@@ -152,7 +156,6 @@ export default function useMentorAttendance() {
       const data = response?.data ?? null;
 
       console.log("MENTOR ATTENDANCE DETAIL:", data);
-
       console.log("STATUS ABSENSI:", data?.status_absensi);
 
       setAttendanceDetail(data);
@@ -217,12 +220,12 @@ export default function useMentorAttendance() {
 
     const start = createDateTime(
       selectedSchedule,
-      getScheduleStartTime(selectedSchedule)
+      getScheduleStartTime(selectedSchedule),
     );
 
     const end = createDateTime(
       selectedSchedule,
-      getScheduleEndTime(selectedSchedule)
+      getScheduleEndTime(selectedSchedule),
     );
 
     if (!start || !end) {
@@ -237,6 +240,7 @@ export default function useMentorAttendance() {
     /*
      * ABSENSI SUDAH SELESAI
      */
+
     if (attendanceStatus === "checked-out") {
       return {
         status: "completed",
@@ -251,6 +255,7 @@ export default function useMentorAttendance() {
     /*
      * BELUM WAKTUNYA
      */
+
     if (now < start) {
       return {
         status: "upcoming",
@@ -265,15 +270,13 @@ export default function useMentorAttendance() {
     /*
      * JADWAL SEDANG BERLANGSUNG
      */
+
     if (now >= start && now <= end) {
       return {
         status: "active",
         label: "Jadwal sedang berlangsung",
-
         canCheckIn: attendanceStatus === "idle",
-
         canCheckOut: attendanceStatus === "checked-in",
-
         start,
         end,
       };
@@ -282,18 +285,12 @@ export default function useMentorAttendance() {
     /*
      * JADWAL SUDAH SELESAI
      */
+
     return {
       status: "finished",
       label: "Jadwal telah selesai",
-
       canCheckIn: false,
-
-      /*
-       * Tetap boleh checkout jika
-       * mentor sudah check-in.
-       */
       canCheckOut: attendanceStatus === "checked-in",
-
       start,
       end,
     };
@@ -333,12 +330,28 @@ export default function useMentorAttendance() {
       return;
     }
 
-    if (!location) {
+    /*
+     * ========================================
+     * CEK TIPE PERTEMUAN
+     * ========================================
+     *
+     * ONLINE:
+     * - lokasi optional
+     * - evidence optional
+     *
+     * OFFLINE:
+     * - lokasi required
+     * - evidence required
+     */
+
+    const isOnline = isOnlineSchedule(selectedSchedule);
+
+    if (!isOnline && !location) {
       toast.error("Silakan ambil lokasi terlebih dahulu.");
       return;
     }
 
-    if (!evidence) {
+    if (!isOnline && !evidence) {
       toast.error("Silakan upload foto evidence check-in.");
       return;
     }
@@ -346,13 +359,32 @@ export default function useMentorAttendance() {
     try {
       setSubmitting(true);
 
-      const response = await mentorCheckIn({
+      /*
+       * ========================================
+       * BUILD PAYLOAD
+       * ========================================
+       *
+       * Jangan mengirim latitude/longitude
+       * jika lokasi memang tidak tersedia.
+       */
+
+      const payload = {
         id_jadwal: selectedSchedule.id_jadwal,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        evidence,
-      });
+      };
+
+      if (location) {
+        payload.latitude = location.latitude;
+        payload.longitude = location.longitude;
+        payload.accuracy = location.accuracy;
+      }
+
+      if (evidence) {
+        payload.evidence = evidence;
+      }
+
+      console.log("MENTOR CHECK-IN PAYLOAD:", payload);
+
+      const response = await mentorCheckIn(payload);
 
       setCheckInData(response);
 
@@ -391,12 +423,20 @@ export default function useMentorAttendance() {
       return;
     }
 
-    if (!location) {
+    /*
+     * ========================================
+     * CEK TIPE PERTEMUAN
+     * ========================================
+     */
+
+    const isOnline = isOnlineSchedule(selectedSchedule);
+
+    if (!isOnline && !location) {
       toast.error("Silakan ambil lokasi terlebih dahulu.");
       return;
     }
 
-    if (!evidence) {
+    if (!isOnline && !evidence) {
       toast.error("Silakan upload foto evidence check-out.");
       return;
     }
@@ -404,13 +444,29 @@ export default function useMentorAttendance() {
     try {
       setSubmitting(true);
 
-      const response = await mentorCheckOut({
+      /*
+       * ========================================
+       * BUILD PAYLOAD
+       * ========================================
+       */
+
+      const payload = {
         id_jadwal: selectedSchedule.id_jadwal,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        evidence,
-      });
+      };
+
+      if (location) {
+        payload.latitude = location.latitude;
+        payload.longitude = location.longitude;
+        payload.accuracy = location.accuracy;
+      }
+
+      if (evidence) {
+        payload.evidence = evidence;
+      }
+
+      console.log("MENTOR CHECK-OUT PAYLOAD:", payload);
+
+      const response = await mentorCheckOut(payload);
 
       setCheckOutData(response);
 
@@ -484,7 +540,7 @@ export default function useMentorAttendance() {
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0,
-      }
+      },
     );
   }, [toast]);
 
@@ -554,6 +610,14 @@ export default function useMentorAttendance() {
  * HELPERS
  * ==========================================
  */
+
+function isOnlineSchedule(schedule) {
+  return (
+    String(schedule?.type_pertemuan || "")
+      .trim()
+      .toUpperCase() === "ONLINE"
+  );
+}
 
 function formatDateKey(date) {
   const year = date.getFullYear();
