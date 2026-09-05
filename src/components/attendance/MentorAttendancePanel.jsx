@@ -197,22 +197,26 @@ export default function MentorAttendancePanel({
                 LOCATION
                 ==================================== */}
 
-            <LocationSection
-              location={location}
-              locationLoading={locationLoading}
-              submitting={submitting}
-              onGetLocation={onGetLocation}
-            />
+            {isOffline && (
+              <LocationSection
+                location={location}
+                locationLoading={locationLoading}
+                submitting={submitting}
+                onGetLocation={onGetLocation}
+              />
+            )}
 
             {/* ====================================
                 CAMERA / EVIDENCE
                 ==================================== */}
 
-            <EvidenceSection
-              evidence={evidence}
-              submitting={submitting}
-              onEvidenceChange={onEvidenceChange}
-            />
+            {isOffline && (
+              <EvidenceSection
+                evidence={evidence}
+                submitting={submitting}
+                onEvidenceChange={onEvidenceChange}
+              />
+            )}
 
             {/* ====================================
                 ACTION
@@ -472,7 +476,7 @@ function LocationSection({
           >
             {location
               ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
-                  6,
+                  6
                 )}`
               : "Lokasi belum diambil"}
           </p>
@@ -627,7 +631,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
       if (error?.name === "NotAllowedError") {
         setCameraError(
-          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan.",
+          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan."
         );
       } else if (error?.name === "NotFoundError") {
         setCameraError("Kamera tidak ditemukan pada perangkat ini.");
@@ -635,7 +639,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         setCameraError("Kamera sedang digunakan aplikasi lain.");
       } else {
         setCameraError(
-          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera.",
+          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera."
         );
       }
     }
@@ -733,7 +737,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         stopCamera();
       },
       "image/jpeg",
-      0.9,
+      0.9
     );
   };
 

@@ -69,7 +69,7 @@ export async function mentorCheckOut({
   }
 
   if (evidence) {
-    formData.append("evidence_url", evidence);
+    formData.append("evidence", evidence, evidence.name || "evidence.jpg");
   }
 
   return api("/absensi/mentor/check-out", {

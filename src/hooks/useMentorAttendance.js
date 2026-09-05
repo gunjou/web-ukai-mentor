@@ -66,8 +66,8 @@ export default function useMentorAttendance() {
       const data = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-          ? result.data
-          : [];
+        ? result.data
+        : [];
 
       setSchedules(data);
     } catch (err) {
@@ -220,12 +220,12 @@ export default function useMentorAttendance() {
 
     const start = createDateTime(
       selectedSchedule,
-      getScheduleStartTime(selectedSchedule),
+      getScheduleStartTime(selectedSchedule)
     );
 
     const end = createDateTime(
       selectedSchedule,
-      getScheduleEndTime(selectedSchedule),
+      getScheduleEndTime(selectedSchedule)
     );
 
     if (!start || !end) {
@@ -372,13 +372,13 @@ export default function useMentorAttendance() {
         id_jadwal: selectedSchedule.id_jadwal,
       };
 
-      if (location) {
+      if (!isOnline && location) {
         payload.latitude = location.latitude;
         payload.longitude = location.longitude;
         payload.accuracy = location.accuracy;
       }
 
-      if (evidence) {
+      if (!isOnline && evidence) {
         payload.evidence = evidence;
       }
 
@@ -387,6 +387,7 @@ export default function useMentorAttendance() {
       const response = await mentorCheckIn(payload);
 
       setCheckInData(response);
+      setEvidence(null);
 
       await loadAttendanceStatus(selectedSchedule);
 
@@ -454,13 +455,13 @@ export default function useMentorAttendance() {
         id_jadwal: selectedSchedule.id_jadwal,
       };
 
-      if (location) {
+      if (!isOnline && location) {
         payload.latitude = location.latitude;
         payload.longitude = location.longitude;
         payload.accuracy = location.accuracy;
       }
 
-      if (evidence) {
+      if (!isOnline && evidence) {
         payload.evidence = evidence;
       }
 
@@ -540,7 +541,7 @@ export default function useMentorAttendance() {
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0,
-      },
+      }
     );
   }, [toast]);
 
