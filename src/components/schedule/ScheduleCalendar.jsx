@@ -93,7 +93,7 @@ export default function ScheduleCalendar({
     });
 
     return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label)
+      a.label.localeCompare(b.label),
     );
   }, [allSchedules, schedules]);
 
@@ -156,7 +156,7 @@ export default function ScheduleCalendar({
 
   function goPreviousMonth() {
     setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1)
+      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
     );
 
     setSelectedDate(null);
@@ -164,7 +164,7 @@ export default function ScheduleCalendar({
 
   function goNextMonth() {
     setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1)
+      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
     );
 
     setSelectedDate(null);
@@ -408,7 +408,7 @@ export default function ScheduleCalendar({
 
                   index === 0 && "text-danger",
 
-                  index === 6 && "text-primary-600 dark:text-primary-400"
+                  index === 6 && "text-primary-600 dark:text-primary-400",
                 )}
               >
                 <span
@@ -490,11 +490,19 @@ export default function ScheduleCalendar({
                     "lg:min-h-[165px]",
                     "lg:p-2",
 
+                    // ================================================================
+                    // TANGGAL DI LUAR BULAN AKTIF
+                    // ================================================================
+
                     !isCurrentMonth &&
-                      "bg-background-secondary dark:bg-background",
+                      "bg-gray-50 text-gray-400 dark:bg-gray-900/40 dark:text-gray-600",
+
+                    // ================================================================
+                    // TANGGAL TERPILIH
+                    // ================================================================
 
                     isSelected &&
-                      "ring-1 ring-inset ring-primary-500/40 dark:ring-primary-400/30"
+                      "ring-1 ring-inset ring-primary-500/40 dark:ring-primary-400/30",
                   )}
                 >
                   {/* =================================
@@ -516,16 +524,32 @@ export default function ScheduleCalendar({
                         "text-[11px] font-medium",
                         "sm:h-7 sm:w-7 sm:text-xs",
 
-                        !isCurrentMonth && "text-foreground-muted",
+                        // ================================================================
+                        // TANGGAL DI LUAR BULAN AKTIF
+                        // ================================================================
+
+                        !isCurrentMonth && "text-gray-400 dark:text-gray-600",
+
+                        // ================================================================
+                        // TANGGAL BULAN AKTIF
+                        // ================================================================
 
                         isCurrentMonth && !isToday && "text-foreground",
+
+                        // ================================================================
+                        // HARI INI
+                        // ================================================================
 
                         isToday &&
                           "bg-primary-500 text-white font-bold shadow-sm",
 
+                        // ================================================================
+                        // TANGGAL TERPILIH
+                        // ================================================================
+
                         isSelected &&
                           !isToday &&
-                          "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+                          "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300",
                       )}
                     >
                       {day.getDate()}

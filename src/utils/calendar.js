@@ -34,35 +34,51 @@ export function toDateKey(date) {
   return "";
 }
 
-export function getCalendarDays(date) {
-  const year = date.getFullYear();
-  const month = date.getMonth();
+// ========================================================================
+// CALENDAR DAYS
+// ========================================================================
 
+export function getCalendarDays(currentDate) {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  // Hari pertama bulan aktif
   const firstDay = new Date(year, month, 1);
 
-  /*
-   * Minggu = 0
-   * Senin = 1
-   * ...
-   * Sabtu = 6
-   */
-  const startDay = firstDay.getDay();
+  // Hari terakhir bulan aktif
+  const lastDay = new Date(year, month + 1, 0);
 
-  const startDate = new Date(year, month, 1 - startDay);
+  // Minggu = 0, Senin = 1, ..., Sabtu = 6
+  const startDay = firstDay.getDay();
+  const endDay = lastDay.getDay();
 
   const days = [];
 
-  /*
-   * 6 minggu x 7 hari
-   */
-  for (let i = 0; i < 42; i += 1) {
-    days.push(
-      new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate() + i
-      )
-    );
+  // ======================================================================
+  // PREVIOUS MONTH
+  // ======================================================================
+
+  for (let i = startDay - 1; i >= 0; i--) {
+    days.push(new Date(year, month, -i));
+  }
+
+  // ======================================================================
+  // CURRENT MONTH
+  // ======================================================================
+
+  for (let date = 1; date <= lastDay.getDate(); date++) {
+    days.push(new Date(year, month, date));
+  }
+
+  // ======================================================================
+  // NEXT MONTH
+  // HANYA TAMBAHKAN SAMPAI BARIS TERAKHIR PENUH
+  // ======================================================================
+
+  const remainingDays = 6 - endDay;
+
+  for (let date = 1; date <= remainingDays; date++) {
+    days.push(new Date(year, month + 1, date));
   }
 
   return days;
