@@ -1,7 +1,7 @@
 import { api } from "../utils/api";
 
 export async function getSchedules() {
-  const response = await api("/jadwal");
+  const response = await api("/jadwal?page=1&per_page=9999");
 
   return response?.data || [];
 }
