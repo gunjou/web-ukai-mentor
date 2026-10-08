@@ -276,7 +276,7 @@ function ScheduleItem({ schedule, selected, now, attendanceStatus, onClick }) {
 
             <span>
               {formatTime(getScheduleStartTime(schedule))} -{" "}
-              {formatTime(getScheduleEndTime(schedule))}
+              {formatTime(getScheduleEndTime(schedule))} WIB
             </span>
           </div>
 

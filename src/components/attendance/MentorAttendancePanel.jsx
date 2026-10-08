@@ -167,7 +167,7 @@ export default function MentorAttendancePanel({
 
           <span>
             {formatTime(getScheduleStartTime(schedule))} -{" "}
-            {formatTime(getScheduleEndTime(schedule))}
+            {formatTime(getScheduleEndTime(schedule))} WIB
           </span>
         </div>
       </div>
@@ -476,7 +476,7 @@ function LocationSection({
           >
             {location
               ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
-                  6
+                  6,
                 )}`
               : "Lokasi belum diambil"}
           </p>
@@ -631,7 +631,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
       if (error?.name === "NotAllowedError") {
         setCameraError(
-          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan."
+          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan.",
         );
       } else if (error?.name === "NotFoundError") {
         setCameraError("Kamera tidak ditemukan pada perangkat ini.");
@@ -639,7 +639,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         setCameraError("Kamera sedang digunakan aplikasi lain.");
       } else {
         setCameraError(
-          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera."
+          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera.",
         );
       }
     }
@@ -737,7 +737,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         stopCamera();
       },
       "image/jpeg",
-      0.9
+      0.9,
     );
   };
 

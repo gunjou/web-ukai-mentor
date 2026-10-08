@@ -127,7 +127,7 @@ export default function ScheduleEvent({ schedule, onClick }) {
           >
             {formatTime(startTime)}
             {" - "}
-            {formatTime(endTime)}
+            {formatTime(endTime)} WIB
           </p>
 
           {/* =====================================

@@ -473,7 +473,7 @@ function ScheduleTimeBox({ title, date, start, end }) {
       >
         {formatTime(start)}
         {" - "}
-        {formatTime(end)}
+        {formatTime(end)} WIB
       </p>
     </div>
   );

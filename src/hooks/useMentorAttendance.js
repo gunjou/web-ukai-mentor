@@ -10,6 +10,7 @@ import {
 } from "../services/attendanceService";
 
 import { getScheduleStartTime, getScheduleEndTime } from "../utils/schedule";
+import { getWibNow } from "../utils/time";
 
 export default function useMentorAttendance() {
   const toast = useToast();
@@ -32,7 +33,7 @@ export default function useMentorAttendance() {
   const [checkInData, setCheckInData] = useState(null);
   const [checkOutData, setCheckOutData] = useState(null);
 
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => getWibNow());
 
   /*
    * ==========================================
@@ -42,7 +43,7 @@ export default function useMentorAttendance() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setNow(new Date());
+      setNow(getWibNow());
     }, 1000);
 
     return () => clearInterval(timer);
@@ -66,8 +67,8 @@ export default function useMentorAttendance() {
       const data = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-        ? result.data
-        : [];
+          ? result.data
+          : [];
 
       setSchedules(data);
     } catch (err) {
@@ -220,12 +221,12 @@ export default function useMentorAttendance() {
 
     const start = createDateTime(
       selectedSchedule,
-      getScheduleStartTime(selectedSchedule)
+      getScheduleStartTime(selectedSchedule),
     );
 
     const end = createDateTime(
       selectedSchedule,
-      getScheduleEndTime(selectedSchedule)
+      getScheduleEndTime(selectedSchedule),
     );
 
     if (!start || !end) {
@@ -541,7 +542,7 @@ export default function useMentorAttendance() {
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0,
-      }
+      },
     );
   }, [toast]);
 
@@ -640,7 +641,13 @@ function createDateTime(schedule, time) {
     return null;
   }
 
-  const parsed = new Date(`${date}T${time}`);
+  const [year, month, day] = date.split("-").map(Number);
+
+  const [hour = 0, minute = 0, second = 0] = String(time)
+    .split(":")
+    .map(Number);
+
+  const parsed = new Date(year, month - 1, day, hour, minute, second);
 
   if (Number.isNaN(parsed.getTime())) {
     return null;
