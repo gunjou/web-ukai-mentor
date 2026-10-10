@@ -68,8 +68,8 @@ export default function useAttendance() {
       const data = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-        ? result.data
-        : [];
+          ? result.data
+          : [];
 
       setSchedules(data);
 
@@ -248,7 +248,7 @@ export default function useAttendance() {
         return false;
       }
     },
-    [selectedSchedule, loadParticipantAttendance, toast]
+    [selectedSchedule, loadParticipantAttendance, toast],
   );
 
   /*
@@ -279,7 +279,7 @@ export default function useAttendance() {
         return false;
       }
     },
-    [selectedSchedule, loadParticipantAttendance, toast]
+    [selectedSchedule, loadParticipantAttendance, toast],
   );
 
   /*
@@ -308,7 +308,7 @@ export default function useAttendance() {
         return false;
       }
     },
-    [selectedSchedule, loadParticipantAttendance, toast]
+    [selectedSchedule, loadParticipantAttendance, toast],
   );
 
   /*

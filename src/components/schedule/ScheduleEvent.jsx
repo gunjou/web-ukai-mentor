@@ -1,4 +1,4 @@
-import { MapPin, Video, CalendarClock } from "lucide-react";
+import { MapPin, Video, CalendarClock, Layers3 } from "lucide-react";
 
 import {
   formatTime,
@@ -9,22 +9,53 @@ import {
 } from "../../utils/schedule";
 
 export default function ScheduleEvent({ schedule, onClick }) {
-  const type = getMeetingType(schedule);
-  const online = type === "ONLINE";
-  const rescheduled = isRescheduled(schedule);
+  const classes = schedule?.classes || [];
 
-  const startTime = getScheduleStartTime(schedule);
-  const endTime = getScheduleEndTime(schedule);
+  if (!classes.length) {
+    return null;
+  }
+
+  /*
+   * Karena API sekarang mengembalikan group berdasarkan:
+   * tanggal + waktu_mulai + waktu_selesai,
+   * kita gunakan data group sebagai sumber utama.
+   */
+
+  const startTime = schedule.waktu_mulai || getScheduleStartTime(classes[0]);
+
+  const endTime = schedule.waktu_selesai || getScheduleEndTime(classes[0]);
+
+  /*
+   * Ambil tipe meeting dari class pertama.
+   *
+   * Saat ini seluruh contoh data ONLINE.
+   * Jika nantinya satu group bisa memiliki ONLINE + OFFLINE,
+   * kita anggap mixed jika tipenya berbeda.
+   */
+  const meetingTypes = [
+    ...new Set(classes.map((item) => getMeetingType(item))),
+  ];
+
+  const isOnline = meetingTypes.length === 1 && meetingTypes[0] === "ONLINE";
+  const isMixed = meetingTypes.length > 1;
+
+  /*
+   * Reschedule cukup dicek dari seluruh classes.
+   */
+  const rescheduled = classes.some((item) => isRescheduled(item));
+
+  /*
+   * Jangan tampilkan semua kelas di calendar cell.
+   * Cukup beberapa item + counter.
+   */
+  const visibleClasses = classes.slice(0, 3);
+  const remainingCount = Math.max(classes.length - visibleClasses.length, 0);
 
   return (
     <button
       type="button"
       onClick={() => onClick?.(schedule)}
-      title={
-        rescheduled
-          ? `${schedule.nama_kelas || "Jadwal"} • Jadwal di-reschedule`
-          : schedule.nama_kelas || "Detail jadwal"
-      }
+      title={`${formatTime(startTime)} - ${formatTime(endTime)} WIB • ${classes.length} kelas`}
       className={`
         group
         relative
@@ -42,7 +73,7 @@ export default function ScheduleEvent({ schedule, onClick }) {
         focus:ring-primary-500/30
 
         ${
-          online
+          isOnline
             ? `
               border-info/30
               bg-info-light
@@ -66,95 +97,113 @@ export default function ScheduleEvent({ schedule, onClick }) {
       {rescheduled && (
         <span
           className="
-    absolute
-    right-1.5
-    top-1.5
-    flex
-    h-4
-    w-4
-    items-center
-    justify-center
-    rounded-full
-    bg-warning/15
-    text-[9px]
-    font-bold
-    text-warning
-  "
-          title="Jadwal telah di-reschedule"
+            absolute
+            right-2.5
+            top-5.5
+            flex
+            h-4
+            w-4
+            items-center
+            justify-center
+            rounded-full
+            bg-warning/15
+            text-warning
+          "
+          title="Terdapat jadwal yang telah di-reschedule"
         >
-          <CalendarClock size={11} />
+          {/* <CalendarClock size={11} /> */}
         </span>
       )}
 
-      <div className="flex items-start gap-1.5">
-        {/* Meeting Type Icon */}
+      {/* =====================================
+          HEADER
+          ===================================== */}
 
-        {online ? (
+      <div className="flex items-start gap-1.5">
+        {isMixed ? (
+          <Layers3 size={13} className="mt-0.5 shrink-0" />
+        ) : isOnline ? (
           <Video size={13} className="mt-0.5 shrink-0" />
         ) : (
           <MapPin size={13} className="mt-0.5 shrink-0" />
         )}
 
         <div className="min-w-0 flex-1">
-          {/* =====================================
-              CLASS NAME
-              ===================================== */}
+          {/* TIME */}
 
-          <div className="pr-3">
-            <p
+          <div className="flex items-center justify-between gap-1 ">
+            <p className="text-[10px] font-bold leading-tight">
+              {formatTime(startTime)} - {formatTime(endTime)}
+            </p>
+
+            {/* COUNT */}
+
+            <span
               className="
-                truncate
-                text-[11px]
-                font-semibold
-                leading-tight
+                shrink-0
+                rounded-full
+                bg-black/5
+                px-1.5
+                py-0.5
+                text-[8px]
+                font-bold
+                dark:bg-white/10
               "
             >
-              {schedule.nama_kelas || "Tanpa kelas"}
-            </p>
+              {classes.length}
+            </span>
           </div>
 
           {/* =====================================
-              TIME
+              CLASS LIST
               ===================================== */}
 
-          <p
-            className="
-              mt-1
-              text-[10px]
-              font-medium
-              opacity-80
-            "
-          >
-            {formatTime(startTime)}
-            {" - "}
-            {formatTime(endTime)} WIB
-          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {visibleClasses.map((item) => (
+              <p
+                key={item.id_jadwal}
+                className="
+                  truncate
+                  text-[9px]
+                  font-semibold
+                  leading-tight
+                "
+              >
+                • {item.nama_kelas || "Tanpa kelas"}
+              </p>
+            ))}
+
+            {/* REMAINING */}
+
+            {remainingCount > 0 && (
+              <p
+                className="
+                  mt-1
+                  text-[8px]
+                  font-bold
+                  opacity-60
+                "
+              >
+                +{remainingCount} kelas lainnya
+              </p>
+            )}
+          </div>
 
           {/* =====================================
-              TOPIC AND NOTES
+              TOPIC
               ===================================== */}
 
           <p
             className="
-              mt-1
+              mt-1.5
               truncate
-              text-[9px]
+              text-[8px]
               font-medium
               opacity-70
             "
+            title={classes[0]?.topik || "-"}
           >
-            Topik: {schedule.topik || "-"}
-          </p>
-
-          <p
-            className="
-              mt-1
-              truncate
-              text-[9px]
-              opacity-70
-            "
-          >
-            Catatan: {schedule.catatan || "-"}
+            {classes[0]?.topik || "-"}
           </p>
         </div>
       </div>

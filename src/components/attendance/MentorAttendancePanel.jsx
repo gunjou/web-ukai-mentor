@@ -26,22 +26,17 @@ import { formatDateTime } from "../../utils/date";
 
 export default function MentorAttendancePanel({
   schedule,
+  schedules = [],
   timeStatus,
-
   location,
   locationLoading,
-
   evidence,
-
   submitting,
-
   attendanceStatus,
   attendanceDetail,
   attendanceLoading,
-
   onGetLocation,
   onEvidenceChange,
-
   onCheckIn,
   onCheckOut,
 }) {
@@ -141,17 +136,38 @@ export default function MentorAttendancePanel({
           Absensi
         </p>
 
-        <h2
-          className="
-            mt-1
-            truncate
-            text-base
-            font-semibold
-            text-foreground
-          "
-        >
-          {schedule.nama_kelas || "Tanpa nama kelas"}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2
+            className="
+      min-w-0
+      truncate
+      text-base
+      font-semibold
+      text-foreground
+    "
+          >
+            {schedule.nama_kelas || "Tanpa nama kelas"}
+          </h2>
+
+          {schedules.length > 1 && (
+            <span
+              className="
+        shrink-0
+        rounded-full
+        bg-primary-100
+        px-2
+        py-0.5
+        text-[10px]
+        font-medium
+        text-primary-700
+        dark:bg-primary-900/20
+        dark:text-primary-300
+      "
+            >
+              {schedules.length} jadwal
+            </span>
+          )}
+        </div>
 
         <div
           className="
@@ -170,6 +186,7 @@ export default function MentorAttendancePanel({
             {formatTime(getScheduleEndTime(schedule))} WIB
           </span>
         </div>
+        {schedules.length > 1 && <GroupedScheduleInfo schedules={schedules} />}
       </div>
 
       <div className="space-y-4 p-4">
@@ -229,7 +246,8 @@ export default function MentorAttendancePanel({
                 evidence={evidence}
                 isOnline={isOnline}
                 canCheckOut={timeStatus.canCheckOut}
-                onCheckOut={onCheckOut}
+                schedules={schedules}
+                onCheckOut={() => onCheckOut(schedules)}
               />
             ) : (
               <CheckInButton
@@ -238,7 +256,8 @@ export default function MentorAttendancePanel({
                 evidence={evidence}
                 isOnline={isOnline}
                 canCheckIn={timeStatus.canCheckIn}
-                onCheckIn={onCheckIn}
+                schedules={schedules}
+                onCheckIn={() => onCheckIn(schedules)}
               />
             )}
 
@@ -257,6 +276,81 @@ export default function MentorAttendancePanel({
         )}
       </div>
     </Card>
+  );
+}
+
+/*
+ * ==========================================
+ * GROUPED SCHEDULE INFO
+ * ==========================================
+ */
+
+function GroupedScheduleInfo({ schedules }) {
+  return (
+    <div
+      className="
+        mt-3
+        rounded-xl
+        border
+        border-primary/20
+        bg-primary-50
+        p-3
+        dark:bg-primary-900/10
+      "
+    >
+      <p
+        className="
+          text-[10px]
+          font-semibold
+          uppercase
+          tracking-wide
+          text-primary-700
+          dark:text-primary-300
+        "
+      >
+        Absensi kolektif
+      </p>
+
+      <p
+        className="
+          mt-1
+          text-[11px]
+          leading-relaxed
+          text-foreground-secondary
+        "
+      >
+        Absensi akan diterapkan ke seluruh jadwal dalam group ini.
+      </p>
+
+      <div className="mt-2 space-y-1">
+        {schedules.map((item) => (
+          <div
+            key={item.id_jadwal}
+            className="
+              flex
+              items-center
+              gap-2
+              text-xs
+              text-foreground
+            "
+          >
+            <span
+              className="
+                h-1.5
+                w-1.5
+                shrink-0
+                rounded-full
+                bg-primary
+              "
+            />
+
+            <span className="min-w-0 truncate">
+              {item.nama_kelas || "Tanpa nama kelas"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1131,9 +1225,13 @@ function CheckInButton({
   evidence,
   isOnline,
   canCheckIn,
+  schedules = [],
   onCheckIn,
 }) {
   const missingRequiredData = !isOnline && (!location || !evidence);
+
+  const label =
+    schedules.length > 1 ? `Check-in ${schedules.length} Jadwal` : "Check-in";
 
   return (
     <Button
@@ -1144,7 +1242,7 @@ function CheckInButton({
     >
       <LogIn size={16} />
 
-      {submitting ? "Memproses..." : "Check-in"}
+      {submitting ? "Memproses..." : label}
     </Button>
   );
 }
@@ -1161,9 +1259,13 @@ function CheckOutButton({
   evidence,
   isOnline,
   canCheckOut,
+  schedules = [],
   onCheckOut,
 }) {
   const missingRequiredData = !isOnline && (!location || !evidence);
+
+  const label =
+    schedules.length > 1 ? `Check-out ${schedules.length} Jadwal` : "Check-out";
 
   return (
     <Button
@@ -1175,7 +1277,7 @@ function CheckOutButton({
     >
       <LogOut size={16} />
 
-      {submitting ? "Memproses..." : "Check-out"}
+      {submitting ? "Memproses..." : label}
     </Button>
   );
 }

@@ -10,6 +10,16 @@ export async function getScheduleById(idJadwal) {
   return api(`/jadwal/${idJadwal}`);
 }
 
+export async function getSchedulesGroup() {
+  const response = await api("/jadwal/group");
+
+  return response?.data || [];
+}
+
+export async function getScheduleByIdGroup(idJadwal) {
+  return api(`/jadwal/${idJadwal}/group`);
+}
+
 export async function createSchedule(payload) {
   return api("/jadwal", {
     method: "POST",

@@ -14,6 +14,30 @@ import {
   getScheduleEndTime,
 } from "../../utils/schedule";
 
+function groupSchedules(schedules) {
+  const groups = new Map();
+
+  schedules.forEach((schedule) => {
+    const key = [
+      schedule.tanggal_efektif,
+      schedule.waktu_mulai_efektif,
+      schedule.waktu_selesai_efektif,
+      schedule.type_pertemuan,
+    ].join("|");
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        groupKey: key,
+        schedules: [],
+      });
+    }
+
+    groups.get(key).schedules.push(schedule);
+  });
+
+  return Array.from(groups.values());
+}
+
 export default function MentorScheduleList({
   schedules,
   selectedSchedule,
@@ -21,6 +45,8 @@ export default function MentorScheduleList({
   attendanceStatus,
   onScheduleChange,
 }) {
+  const groupedSchedules = groupSchedules(schedules);
+
   return (
     <Card className="overflow-hidden p-0">
       {/* HEADER */}
@@ -76,27 +102,268 @@ export default function MentorScheduleList({
         </div>
       </div>
 
-      {schedules.length === 0 ? (
+      {groupedSchedules.length === 0 ? (
         <EmptySchedule />
       ) : (
         <div className="divide-y divide-border">
-          {schedules.map((schedule) => {
-            const selected = selectedSchedule?.id_jadwal === schedule.id_jadwal;
-
-            return (
-              <ScheduleItem
-                key={schedule.id_jadwal}
-                schedule={schedule}
-                selected={selected}
-                now={now}
-                attendanceStatus={selected ? attendanceStatus : "idle"}
-                onClick={() => onScheduleChange(schedule)}
-              />
-            );
-          })}
+          {groupedSchedules.map((group) => (
+            <ScheduleGroupItem
+              key={group.groupKey}
+              schedules={group.schedules}
+              selectedSchedule={selectedSchedule}
+              now={now}
+              attendanceStatus={attendanceStatus}
+              onScheduleChange={onScheduleChange}
+            />
+          ))}
         </div>
       )}
     </Card>
+  );
+}
+
+/*
+ * ==========================================
+ * SCHEDULE GROUP ITEM
+ * ==========================================
+ */
+function ScheduleGroupItem({
+  schedules,
+  selectedSchedule,
+  now,
+  attendanceStatus,
+  onScheduleChange,
+}) {
+  const firstSchedule = schedules[0];
+
+  const selected = schedules.some(
+    (schedule) => schedule.id_jadwal === selectedSchedule?.id_jadwal,
+  );
+
+  const start = createDateTime(
+    firstSchedule,
+    getScheduleStartTime(firstSchedule),
+  );
+
+  const end = createDateTime(firstSchedule, getScheduleEndTime(firstSchedule));
+
+  let timeStatus = "upcoming";
+
+  if (start && end) {
+    if (now >= start && now <= end) {
+      timeStatus = "active";
+    }
+
+    if (now > end) {
+      timeStatus = "finished";
+    }
+  }
+
+  const isOnline =
+    String(firstSchedule.type_pertemuan || "").toUpperCase() === "ONLINE";
+
+  return (
+    <div
+      className={`
+        border-l-2
+        px-4
+        py-4
+        sm:px-5
+
+        ${
+          selected
+            ? `
+              border-l-primary-500
+              bg-primary-50
+              dark:bg-gray-900
+            `
+            : `
+              border-l-transparent
+            `
+        }
+      `}
+    >
+      {/* GROUP HEADER */}
+      <div className="flex items-start gap-3">
+        {/* TYPE ICON */}
+        <div
+          className={`
+            mt-0.5
+            flex
+            h-10
+            w-10
+            shrink-0
+            items-center
+            justify-center
+            rounded-lg
+
+            ${
+              isOnline
+                ? `
+                  bg-info-light
+                  text-info
+                `
+                : `
+                  bg-success-light
+                  text-success
+                `
+            }
+          `}
+        >
+          {isOnline ? <Monitor size={18} /> : <MapPin size={18} />}
+        </div>
+
+        {/* GROUP CONTENT */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              className={`
+                text-sm
+                font-semibold
+                ${
+                  selected
+                    ? "text-primary-700 dark:text-primary-300"
+                    : "text-foreground"
+                }
+              `}
+            >
+              {formatTime(getScheduleStartTime(firstSchedule))} -{" "}
+              {formatTime(getScheduleEndTime(firstSchedule))} WIB
+            </p>
+
+            {schedules.length > 1 && (
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  rounded-full
+                  bg-primary-100
+                  px-2
+                  py-0.5
+                  text-[10px]
+                  font-medium
+                  text-primary-700
+                  dark:bg-primary-900/20
+                  dark:text-primary-300
+                "
+              >
+                {schedules.length} Jadwal
+              </span>
+            )}
+          </div>
+
+          {/* TYPE */}
+          <div
+            className="
+              mt-1.5
+              flex
+              items-center
+              gap-1.5
+              text-[11px]
+              font-medium
+              text-foreground-muted
+            "
+          >
+            {isOnline ? (
+              <>
+                <Monitor size={12} />
+                <span>Online</span>
+              </>
+            ) : (
+              <>
+                <MapPin size={12} />
+                <span>Offline</span>
+              </>
+            )}
+          </div>
+
+          {/* CLASS LIST */}
+          <div className="mt-3 space-y-1.5">
+            {schedules.map((schedule) => {
+              const isSelected =
+                selectedSchedule?.id_jadwal === schedule.id_jadwal;
+
+              return (
+                <button
+                  key={schedule.id_jadwal}
+                  type="button"
+                  onClick={() => onScheduleChange(schedule)}
+                  className={`
+                    block
+                    w-full
+                    rounded-lg
+                    px-2.5
+                    py-2
+                    text-left
+                    transition-colors
+
+                    ${
+                      isSelected
+                        ? `
+                          bg-primary-100
+                          text-primary-700
+                          dark:bg-primary-900/20
+                          dark:text-primary-300
+                        `
+                        : `
+                          hover:bg-background-tertiary
+                        `
+                    }
+                  `}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p
+                      className={`
+                        min-w-0
+                        truncate
+                        text-xs
+                        ${
+                          isSelected
+                            ? "font-semibold"
+                            : "font-medium text-foreground"
+                        }
+                      `}
+                    >
+                      {schedule.nama_kelas || "Tanpa nama kelas"}
+                    </p>
+
+                    {isSelected && (
+                      <CheckCircle2
+                        size={14}
+                        className="shrink-0 text-primary-600 dark:text-primary-400"
+                      />
+                    )}
+                  </div>
+
+                  {schedule.topik && (
+                    <p className="mt-0.5 truncate text-[10px] text-foreground-muted">
+                      {schedule.topik}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* MENTOR */}
+          <p
+            className="
+              mt-2
+              truncate
+              text-[11px]
+              text-foreground-muted
+            "
+          >
+            {firstSchedule.nickname_mentor ||
+              firstSchedule.nama_mentor ||
+              "Tanpa mentor"}
+          </p>
+        </div>
+
+        {/* TIME STATUS */}
+        <TimeStatusBadge status={timeStatus} />
+      </div>
+    </div>
   );
 }
 

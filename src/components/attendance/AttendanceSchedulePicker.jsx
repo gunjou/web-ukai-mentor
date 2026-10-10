@@ -77,7 +77,7 @@ export default function AttendanceSchedulePicker({
           value={selectedSchedule?.id_jadwal || ""}
           onChange={(event) => {
             const schedule = schedules.find(
-              (item) => String(item.id_jadwal) === event.target.value
+              (item) => String(item.id_jadwal) === event.target.value,
             );
 
             onScheduleChange(schedule || null);

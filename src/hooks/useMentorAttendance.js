@@ -411,6 +411,92 @@ export default function useMentorAttendance() {
 
   /*
    * ==========================================
+   * GROUP CHECK IN
+   * ==========================================
+   *
+   * Fungsi baru.
+   *
+   * Fungsi handleCheckIn() existing tidak
+   * diubah karena mungkin digunakan di tempat lain.
+   *
+   * Setiap jadwal tetap menggunakan endpoint
+   * mentorCheckIn() yang sudah ada.
+   */
+
+  const handleCheckInGroup = useCallback(
+    async (groupSchedules = []) => {
+      if (!groupSchedules.length) {
+        toast.error("Tidak ada jadwal yang dipilih.");
+        return;
+      }
+
+      if (!scheduleTimeStatus.canCheckIn) {
+        toast.error(getTimeRestrictionMessage(scheduleTimeStatus.status));
+        return;
+      }
+
+      const isOnline = isOnlineSchedule(selectedSchedule);
+
+      if (!isOnline && !location) {
+        toast.error("Silakan ambil lokasi terlebih dahulu.");
+        return;
+      }
+
+      if (!isOnline && !evidence) {
+        toast.error("Silakan upload foto evidence check-in.");
+        return;
+      }
+
+      try {
+        setSubmitting(true);
+
+        for (const schedule of groupSchedules) {
+          const payload = {
+            id_jadwal: schedule.id_jadwal,
+          };
+
+          if (!isOnline && location) {
+            payload.latitude = location.latitude;
+            payload.longitude = location.longitude;
+            payload.accuracy = location.accuracy;
+          }
+
+          if (!isOnline && evidence) {
+            payload.evidence = evidence;
+          }
+
+          console.log("MENTOR GROUP CHECK-IN PAYLOAD:", payload);
+
+          await mentorCheckIn(payload);
+        }
+
+        setEvidence(null);
+
+        await loadAttendanceStatus(selectedSchedule);
+
+        toast.success(
+          `Check-in berhasil untuk ${groupSchedules.length} jadwal.`,
+        );
+      } catch (err) {
+        console.error("GROUP CHECK-IN ERROR:", err);
+
+        toast.error(err?.message || "Gagal melakukan check-in.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [
+      selectedSchedule,
+      scheduleTimeStatus,
+      location,
+      evidence,
+      toast,
+      loadAttendanceStatus,
+    ],
+  );
+
+  /*
+   * ==========================================
    * CHECK OUT
    * ==========================================
    */
@@ -490,6 +576,89 @@ export default function useMentorAttendance() {
     toast,
     loadAttendanceStatus,
   ]);
+
+  /*
+   * ==========================================
+   * GROUP CHECK OUT
+   * ==========================================
+   *
+   * Fungsi baru.
+   *
+   * Fungsi handleCheckOut() existing tidak
+   * diubah.
+   */
+
+  const handleCheckOutGroup = useCallback(
+    async (groupSchedules = []) => {
+      if (!groupSchedules.length) {
+        toast.error("Tidak ada jadwal yang dipilih.");
+        return;
+      }
+
+      if (attendanceStatus !== "checked-in") {
+        toast.error("Anda belum melakukan check-in.");
+        return;
+      }
+
+      const isOnline = isOnlineSchedule(selectedSchedule);
+
+      if (!isOnline && !location) {
+        toast.error("Silakan ambil lokasi terlebih dahulu.");
+        return;
+      }
+
+      if (!isOnline && !evidence) {
+        toast.error("Silakan upload foto evidence check-out.");
+        return;
+      }
+
+      try {
+        setSubmitting(true);
+
+        for (const schedule of groupSchedules) {
+          const payload = {
+            id_jadwal: schedule.id_jadwal,
+          };
+
+          if (!isOnline && location) {
+            payload.latitude = location.latitude;
+            payload.longitude = location.longitude;
+            payload.accuracy = location.accuracy;
+          }
+
+          if (!isOnline && evidence) {
+            payload.evidence = evidence;
+          }
+
+          console.log("MENTOR GROUP CHECK-OUT PAYLOAD:", payload);
+
+          await mentorCheckOut(payload);
+        }
+
+        setEvidence(null);
+
+        await loadAttendanceStatus(selectedSchedule);
+
+        toast.success(
+          `Check-out berhasil untuk ${groupSchedules.length} jadwal.`,
+        );
+      } catch (err) {
+        console.error("GROUP CHECK-OUT ERROR:", err);
+
+        toast.error(err?.message || "Gagal melakukan check-out.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [
+      selectedSchedule,
+      attendanceStatus,
+      location,
+      evidence,
+      toast,
+      loadAttendanceStatus,
+    ],
+  );
 
   /*
    * ==========================================
@@ -602,8 +771,17 @@ export default function useMentorAttendance() {
     handleGetLocation,
     handleEvidenceChange,
 
+    /*
+     * Existing handlers
+     */
     handleCheckIn,
     handleCheckOut,
+
+    /*
+     * New group handlers
+     */
+    handleCheckInGroup,
+    handleCheckOutGroup,
   };
 }
 

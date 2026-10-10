@@ -60,8 +60,8 @@ export default function MentorScheduleItem({
               timeStatus === "active"
                 ? "bg-success-light text-success"
                 : timeStatus === "finished"
-                ? "bg-background-tertiary text-foreground-muted"
-                : "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                  ? "bg-background-tertiary text-foreground-muted"
+                  : "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
             }
           `}
         >

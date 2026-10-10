@@ -2,10 +2,10 @@ import {
   CalendarDays,
   Clock3,
   MapPin,
-  UserRound,
   Video,
   CalendarClock,
   FileText,
+  Layers3,
 } from "lucide-react";
 
 import {
@@ -13,6 +13,8 @@ import {
   formatScheduleDate,
   getMeetingType,
   getScheduleDate,
+  getScheduleStartTime,
+  getScheduleEndTime,
   isRescheduled,
 } from "../../utils/schedule";
 
@@ -29,44 +31,35 @@ export default function ScheduleDetailModal({
     return null;
   }
 
-  const meetingType = getMeetingType(schedule);
+  const classes = schedule.classes || [];
 
-  const rescheduled = isRescheduled(schedule);
+  if (!classes.length) {
+    return null;
+  }
 
-  const scheduleDate = getScheduleDate(schedule);
+  const groupDate = schedule.tanggal;
+  const groupStartTime = schedule.waktu_mulai;
+  const groupEndTime = schedule.waktu_selesai;
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Detail Jadwal"
-      description="Informasi lengkap pertemuan"
+      description={`${classes.length} kelas dalam satu waktu pertemuan`}
       icon={CalendarDays}
       size="md"
       contentClassName="max-h-[70vh]"
       footer={
-        <div
-          className="
-            flex
-            flex-col-reverse
-            gap-2
-            sm:flex-row
-            sm:justify-end
-          "
-        >
+        <div className="flex justify-end">
           <Button type="button" variant="outline" onClick={onClose}>
             Tutup
-          </Button>
-
-          <Button type="button" onClick={() => onReschedule?.(schedule)}>
-            <CalendarClock size={16} />
-            Reschedule
           </Button>
         </div>
       }
     >
       {/* =====================================
-          CLASS
+          GROUP SUMMARY
           ===================================== */}
 
       <div
@@ -78,14 +71,162 @@ export default function ScheduleDetailModal({
           p-4
         "
       >
-        <div
-          className="
-            flex
-            items-start
-            justify-between
-            gap-4
-          "
-        >
+        <div className="flex items-start gap-3">
+          <div
+            className="
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              bg-info-light
+              text-info
+            "
+          >
+            <Layers3 size={18} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p
+              className="
+                text-[11px]
+                font-medium
+                uppercase
+                tracking-wide
+                text-foreground-muted
+              "
+            >
+              Jadwal Pertemuan
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                font-semibold
+                text-foreground
+              "
+            >
+              {formatScheduleDate(groupDate)}
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-xs
+                text-foreground-secondary
+              "
+            >
+              {formatTime(groupStartTime)}
+              {" - "}
+              {formatTime(groupEndTime)} WIB
+            </p>
+          </div>
+
+          <span
+            className="
+              shrink-0
+              rounded-full
+              bg-background
+              px-2.5
+              py-1
+              text-[10px]
+              font-semibold
+              text-foreground-secondary
+            "
+          >
+            {classes.length} kelas
+          </span>
+        </div>
+      </div>
+
+      {/* =====================================
+          CLASS LIST
+          ===================================== */}
+
+      <div className="mt-4 space-y-3">
+        {classes.map((item, index) => (
+          <ScheduleClassCard
+            key={item.id_jadwal}
+            schedule={item}
+            index={index}
+            onReschedule={onReschedule}
+          />
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+/*
+ * ==========================================
+ * SCHEDULE CLASS CARD
+ * ==========================================
+ */
+
+function ScheduleClassCard({ schedule, index, onReschedule }) {
+  const meetingType = getMeetingType(schedule);
+  const rescheduled = isRescheduled(schedule);
+
+  const scheduleDate = getScheduleDate(schedule);
+  const startTime = getScheduleStartTime(schedule);
+  const endTime = getScheduleEndTime(schedule);
+
+  return (
+    <div
+      className={`
+          group
+          rounded-xl
+          border
+          p-4
+          transition-all
+          duration-200
+          hover:border-primary-500/30
+          hover:shadow-sm
+
+          ${
+            rescheduled
+              ? `
+                border-warning/30
+                bg-warning-light/30
+              `
+              : `
+                border-border
+                bg-card
+              `
+          }
+        `}
+    >
+      {/* =====================================
+          CLASS HEADER
+          ===================================== */}
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className={`
+              flex
+              h-8
+              w-8
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              text-xs
+              font-bold
+
+              ${
+                rescheduled
+                  ? "bg-warning/10 text-warning"
+                  : "bg-background-tertiary text-foreground-muted"
+              }
+            `}
+          >
+            {index + 1}
+          </div>
+
           <div className="min-w-0">
             <p
               className="
@@ -101,25 +242,26 @@ export default function ScheduleDetailModal({
 
             <h3
               className="
-                mt-1
-                text-base
+                mt-0.5
+                truncate
+                text-sm
                 font-semibold
                 text-foreground
               "
             >
-              {schedule.nama_kelas || "-"}
+              {schedule.nama_kelas || "Tanpa kelas"}
             </h3>
           </div>
-
-          <MeetingTypeBadge type={meetingType} />
         </div>
+
+        <MeetingTypeBadge type={meetingType} />
       </div>
 
       {/* =====================================
           MAIN INFORMATION
           ===================================== */}
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 space-y-2">
         <InfoRow
           icon={CalendarDays}
           label="Tanggal efektif"
@@ -130,16 +272,10 @@ export default function ScheduleDetailModal({
           icon={Clock3}
           label="Waktu efektif"
           value={`
-            ${formatTime(schedule.waktu_mulai_efektif)}
+            ${formatTime(startTime)}
             -
-            ${formatTime(schedule.waktu_selesai_efektif)}
+            ${formatTime(endTime)} WIB
           `}
-        />
-
-        <InfoRow
-          icon={UserRound}
-          label="Nickname mentor"
-          value={schedule.nickname_mentor || "-"}
         />
 
         <InfoRow icon={FileText} label="Topik" value={schedule.topik || "-"} />
@@ -158,41 +294,21 @@ export default function ScheduleDetailModal({
       {rescheduled && (
         <div
           className="
-            mt-5
-            rounded-xl
+            mt-4
+            rounded-lg
             border
             border-warning/30
-            bg-warning-light
-            p-4
+            bg-warning/5
+            p-3
           "
         >
-          <div
-            className="
-              flex
-              items-start
-              gap-3
-            "
-          >
-            <div
-              className="
-                flex
-                h-8
-                w-8
-                shrink-0
-                items-center
-                justify-center
-                rounded-lg
-                bg-warning/10
-                text-warning
-              "
-            >
-              <Clock3 size={16} />
-            </div>
+          <div className="flex items-start gap-2.5">
+            <CalendarClock size={16} className="mt-0.5 shrink-0 text-warning" />
 
             <div className="min-w-0">
               <p
                 className="
-                  text-sm
+                  text-xs
                   font-semibold
                   text-warning
                 "
@@ -202,22 +318,22 @@ export default function ScheduleDetailModal({
 
               <p
                 className="
-                  mt-1
-                  text-xs
+                  mt-0.5
+                  text-[11px]
                   leading-relaxed
                   text-foreground-secondary
                 "
               >
-                Jadwal awal berbeda dengan jadwal yang berlaku saat ini.
+                Jadwal efektif kelas ini berbeda dengan jadwal awal.
               </p>
             </div>
           </div>
 
           <div
             className="
-              mt-4
+              mt-3
               grid
-              gap-3
+              gap-2
               sm:grid-cols-2
             "
           >
@@ -239,34 +355,49 @@ export default function ScheduleDetailModal({
       )}
 
       {/* =====================================
-          STATUS
+          STATUS & ACTION
           ===================================== */}
 
       <div
         className="
-          mt-5
+          mt-4
           flex
-          items-center
-          justify-between
-          rounded-xl
+          flex-col
+          gap-3
+          rounded-lg
           border
           border-border
-          px-4
+          px-3
           py-3
+          sm:flex-row
+          sm:items-center
+          sm:justify-between
         "
       >
-        <span
-          className="
-            text-sm
-            text-foreground-secondary
-          "
-        >
-          Status jadwal
-        </span>
+        <div className="flex items-center justify-between gap-3 sm:justify-start">
+          <span
+            className="
+              text-xs
+              text-foreground-secondary
+            "
+          >
+            Status jadwal
+          </span>
 
-        <StatusBadge status={schedule.status} />
+          <StatusBadge status={schedule.status} />
+        </div>
+
+        <Button
+          type="button"
+          size="sm"
+          variant={rescheduled ? "outline" : "default"}
+          onClick={() => onReschedule?.(schedule)}
+        >
+          <CalendarClock size={14} />
+          {rescheduled ? "Ubah Reschedule" : "Reschedule"}
+        </Button>
       </div>
-    </Modal>
+    </div>
   );
 }
 
@@ -283,18 +414,18 @@ function InfoRow({ icon: Icon, label, value }) {
         flex
         items-center
         gap-3
-        rounded-xl
+        rounded-lg
         border
         border-border
-        px-4
-        py-3
+        px-3
+        py-2.5
       "
     >
       <div
         className="
           flex
-          h-9
-          w-9
+          h-8
+          w-8
           shrink-0
           items-center
           justify-center
@@ -303,13 +434,13 @@ function InfoRow({ icon: Icon, label, value }) {
           text-foreground-muted
         "
       >
-        <Icon size={17} />
+        <Icon size={15} />
       </div>
 
       <div className="min-w-0">
         <p
           className="
-            text-[11px]
+            text-[10px]
             text-foreground-muted
           "
         >
@@ -319,8 +450,7 @@ function InfoRow({ icon: Icon, label, value }) {
         <p
           className="
             mt-0.5
-            truncate
-            text-sm
+            text-xs
             font-medium
             text-foreground
           "
@@ -443,7 +573,7 @@ function ScheduleTimeBox({ title, date, start, end }) {
     >
       <p
         className="
-          text-[10px]
+          text-[9px]
           font-semibold
           uppercase
           tracking-wide
@@ -456,18 +586,18 @@ function ScheduleTimeBox({ title, date, start, end }) {
       <p
         className="
           mt-1
-          text-xs
+          text-[11px]
           font-medium
           text-foreground
         "
       >
-        {formatDate(date)}
+        {formatScheduleDate(date)}
       </p>
 
       <p
         className="
           mt-0.5
-          text-xs
+          text-[11px]
           text-foreground-secondary
         "
       >
@@ -477,29 +607,4 @@ function ScheduleTimeBox({ title, date, start, end }) {
       </p>
     </div>
   );
-}
-
-/*
- * ==========================================
- * DATE FORMATTER
- * ==========================================
- */
-
-function formatDate(date) {
-  if (!date) {
-    return "-";
-  }
-
-  const parsed = new Date(`${date}T00:00:00`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return date;
-  }
-
-  return parsed.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }

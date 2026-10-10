@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
 import Card from "../components/ui/Card";
@@ -37,9 +38,29 @@ export default function MentorAttendancePage() {
     handleGetLocation,
     handleEvidenceChange,
 
-    handleCheckIn,
-    handleCheckOut,
+    handleCheckInGroup,
+    handleCheckOutGroup,
   } = attendance;
+
+  // ======================================
+  // SELECTED SCHEDULE GROUP
+  // ======================================
+
+  const selectedSchedules = useMemo(() => {
+    if (!selectedSchedule) {
+      return [];
+    }
+
+    return todaySchedules.filter((schedule) => {
+      return (
+        schedule.tanggal_efektif === selectedSchedule.tanggal_efektif &&
+        schedule.waktu_mulai_efektif === selectedSchedule.waktu_mulai_efektif &&
+        schedule.waktu_selesai_efektif ===
+          selectedSchedule.waktu_selesai_efektif &&
+        schedule.type_pertemuan === selectedSchedule.type_pertemuan
+      );
+    });
+  }, [todaySchedules, selectedSchedule]);
 
   return (
     <div className="space-y-5">
@@ -146,6 +167,7 @@ export default function MentorAttendancePage() {
 
           <MentorAttendancePanel
             schedule={selectedSchedule}
+            schedules={selectedSchedules}
             timeStatus={scheduleTimeStatus}
             location={location}
             locationLoading={locationLoading}
@@ -156,8 +178,8 @@ export default function MentorAttendancePage() {
             attendanceLoading={attendanceLoading}
             onGetLocation={handleGetLocation}
             onEvidenceChange={handleEvidenceChange}
-            onCheckIn={handleCheckIn}
-            onCheckOut={handleCheckOut}
+            onCheckIn={handleCheckInGroup}
+            onCheckOut={handleCheckOutGroup}
           />
         </div>
       )}

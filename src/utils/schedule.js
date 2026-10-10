@@ -30,15 +30,30 @@ export function getMeetingType(schedule) {
 }
 
 export function getScheduleDate(schedule) {
-  return schedule?.tanggal_efektif || schedule?.tanggal || null;
+  return (
+    schedule?.tanggal_efektif ||
+    schedule?.tanggal_reschedule ||
+    schedule?.tanggal ||
+    null
+  );
 }
 
 export function getScheduleStartTime(schedule) {
-  return schedule?.waktu_mulai_efektif || schedule?.waktu_mulai || null;
+  return (
+    schedule?.waktu_mulai_efektif ||
+    schedule?.waktu_mulai_reschedule ||
+    schedule?.waktu_mulai ||
+    null
+  );
 }
 
 export function getScheduleEndTime(schedule) {
-  return schedule?.waktu_selesai_efektif || schedule?.waktu_selesai || null;
+  return (
+    schedule?.waktu_selesai_efektif ||
+    schedule?.waktu_selesai_reschedule ||
+    schedule?.waktu_selesai ||
+    null
+  );
 }
 
 export function isRescheduled(schedule) {
@@ -48,7 +63,7 @@ export function isRescheduled(schedule) {
 
   return Boolean(
     schedule.tanggal_reschedule ||
-      schedule.waktu_mulai_reschedule ||
-      schedule.waktu_selesai_reschedule
+    schedule.waktu_mulai_reschedule ||
+    schedule.waktu_selesai_reschedule,
   );
 }

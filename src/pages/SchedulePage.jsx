@@ -13,7 +13,7 @@ import ScheduleRescheduleModal from "../components/schedule/ScheduleRescheduleMo
 
 import { useToast } from "../context/ToastContext";
 
-import { getSchedules } from "../services/scheduleService";
+import { getSchedulesGroup } from "../services/scheduleService";
 
 import { getMeetingType } from "../utils/schedule";
 
@@ -53,7 +53,7 @@ export default function SchedulePage() {
       setLoading(true);
       setError("");
 
-      const response = await getSchedules();
+      const response = await getSchedulesGroup();
 
       console.log("SCHEDULE API RESPONSE:", response);
 
@@ -62,8 +62,8 @@ export default function SchedulePage() {
       const data = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-        ? result.data
-        : [];
+          ? result.data
+          : [];
 
       console.log("SCHEDULE DATA:", data);
 

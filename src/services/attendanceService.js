@@ -132,7 +132,7 @@ export async function getAttendanceBySchedules(schedules = []) {
       } catch (error) {
         console.error(
           `Failed to load attendance for schedule ${schedule.id_jadwal}:`,
-          error
+          error,
         );
 
         return {
@@ -150,4 +150,56 @@ export async function getAttendanceBySchedules(schedules = []) {
     });
 
   return Promise.all(requests);
+}
+
+export async function mentorCheckInGroup(schedules = [], payload = {}) {
+  if (!Array.isArray(schedules) || schedules.length === 0) {
+    return [];
+  }
+
+  const results = [];
+
+  for (const schedule of schedules) {
+    if (!schedule?.id_jadwal) {
+      continue;
+    }
+
+    const response = await mentorCheckIn({
+      ...payload,
+      id_jadwal: schedule.id_jadwal,
+    });
+
+    results.push({
+      id_jadwal: schedule.id_jadwal,
+      response,
+    });
+  }
+
+  return results;
+}
+
+export async function mentorCheckOutGroup(schedules = [], payload = {}) {
+  if (!Array.isArray(schedules) || schedules.length === 0) {
+    return [];
+  }
+
+  const results = [];
+
+  for (const schedule of schedules) {
+    if (!schedule?.id_jadwal) {
+      continue;
+    }
+
+    const response = await mentorCheckOut({
+      ...payload,
+      id_jadwal: schedule.id_jadwal,
+    });
+
+    results.push({
+      id_jadwal: schedule.id_jadwal,
+      response,
+    });
+  }
+
+  return results;
 }
