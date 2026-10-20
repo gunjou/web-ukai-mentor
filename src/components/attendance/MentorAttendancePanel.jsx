@@ -1,28 +1,116 @@
 import { useEffect, useRef, useState } from "react";
-
 import {
+  AlertCircle,
   CalendarDays,
+  Camera,
   CheckCircle2,
   Clock3,
-  MapPin,
-  Camera,
   LogIn,
   LogOut,
-  AlertCircle,
+  MapPin,
   RefreshCw,
   X,
 } from "lucide-react";
 
 import Card from "../ui/Card";
 import Button from "../ui/Button";
-
 import {
   formatTime,
-  getScheduleStartTime,
   getScheduleEndTime,
+  getScheduleStartTime,
 } from "../../utils/schedule";
-
 import { formatDateTime } from "../../utils/date";
+
+const MINIMUM_TEACHING_DURATION = 2 * 60 * 60 * 1000;
+const WIB_TIME_ZONE = "Asia/Jakarta";
+
+function parseWibDateTime(value) {
+  if (!value) return null;
+
+  // Timestamp tanpa zona waktu dianggap sebagai waktu WIB.
+  const hasTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+  const normalizedValue = hasTimeZone ? value : `${value}+07:00`;
+  const timestamp = new Date(normalizedValue).getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function formatWibTime(dateTime) {
+  if (!dateTime) return null;
+
+  const date = new Date(
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}+07:00`,
+  );
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+}
+
+function getWibNow() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: WIB_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const time = Object.fromEntries(
+    parts.map(({ type, value }) => [type, value]),
+  );
+
+  return new Date(
+    `${time.year}-${time.month}-${time.day}T${time.hour}:${time.minute}:${time.second}+07:00`,
+  ).getTime();
+}
+
+function getCheckOutAvailability(attendanceDetail) {
+  const checkInTime = parseWibDateTime(attendanceDetail?.check_in_at);
+  const scheduleDate = attendanceDetail?.tanggal;
+  const scheduleEndTime = attendanceDetail?.waktu_selesai;
+
+  if (!checkInTime || !scheduleDate || !scheduleEndTime) {
+    return {
+      available: false,
+      remainingMs: null,
+      earliestCheckOut: null,
+    };
+  }
+
+  const scheduleEnd = parseWibDateTime(`${scheduleDate}T${scheduleEndTime}`);
+
+  if (scheduleEnd === null) {
+    return {
+      available: false,
+      remainingMs: null,
+      earliestCheckOut: null,
+    };
+  }
+
+  // Checkout bisa setelah 2 jam mengajar ATAU saat jadwal selesai,
+  // tergantung mana yang tercapai lebih dahulu.
+  const earliestCheckOut = Math.min(
+    checkInTime + MINIMUM_TEACHING_DURATION,
+    scheduleEnd,
+  );
+
+  const remainingMs = Math.max(0, earliestCheckOut - getWibNow());
+
+  return {
+    available: remainingMs === 0,
+    remainingMs,
+    earliestCheckOut,
+  };
+}
 
 export default function MentorAttendancePanel({
   schedule,
@@ -40,179 +128,106 @@ export default function MentorAttendancePanel({
   onCheckIn,
   onCheckOut,
 }) {
-  /*
-   * ==========================================
-   * NO SCHEDULE
-   * ==========================================
-   */
-
   if (!schedule) {
     return (
-      <Card
-        className="
-          flex
-          min-h-[350px]
-          flex-col
-          items-center
-          justify-center
-          p-6
-          text-center
-        "
-      >
+      <Card className="flex min-h-[350px] flex-col items-center justify-center p-6 text-center">
         <CalendarDays size={32} className="text-foreground-muted" />
-
-        <h2
-          className="
-            mt-3
-            text-sm
-            font-semibold
-            text-foreground
-          "
-        >
+        <h2 className="mt-3 text-sm font-semibold text-foreground">
           Pilih jadwal
         </h2>
-
-        <p
-          className="
-            mt-1
-            max-w-xs
-            text-xs
-            leading-relaxed
-            text-foreground-muted
-          "
-        >
+        <p className="mt-1 max-w-xs text-xs leading-relaxed text-foreground-muted">
           Pilih salah satu jadwal hari ini untuk melakukan absensi.
         </p>
       </Card>
     );
   }
 
-  /*
-   * ==========================================
-   * ATTENDANCE STATUS
-   * ==========================================
-   */
+  const checkOutTime = formatWibTime(attendanceDetail?.check_out_at);
+  const checkInTime = formatWibTime(attendanceDetail?.check_in_at);
+  const selectedSchedules =
+    schedules.length > 0 ? schedules : schedule ? [schedule] : [];
 
-  const checkedIn = attendanceStatus === "checked-in";
+  const hasCheckedIn = Boolean(attendanceDetail?.check_in_at);
+  const hasCheckedOut = Boolean(attendanceDetail?.check_out_at);
 
-  const checkedOut = attendanceStatus === "checked-out";
+  // Data absensi dari server menjadi fallback jika status belum sinkron.
+  const checkedIn =
+    attendanceStatus === "checked-in" || (hasCheckedIn && !hasCheckedOut);
 
-  const completed = attendanceStatus === "completed";
+  const completed = attendanceStatus === "completed" || hasCheckedOut;
 
   const isOnline =
     String(schedule.type_pertemuan || "").toUpperCase() === "ONLINE";
 
   const isOffline = !isOnline;
 
-  /*
-   * ==========================================
-   * RENDER
-   * ==========================================
-   */
+  const checkoutDetail = {
+    ...schedule,
+    ...attendanceDetail,
+  };
+
+  // console.log("ini attende", attendanceDetail);
 
   return (
     <Card className="overflow-hidden p-0">
-      {/* ======================================
-          HEADER
-          ====================================== */}
-
-      <div
-        className="
-          border-b
-          border-border
-          px-4
-          py-4
-        "
-      >
-        <p
-          className="
-            text-[11px]
-            font-medium
-            uppercase
-            tracking-wide
-            text-foreground-muted
-          "
-        >
+      <div className="border-b border-border px-4 py-4">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">
           Absensi
         </p>
 
         <div className="flex items-center gap-2">
-          <h2
-            className="
-      min-w-0
-      truncate
-      text-base
-      font-semibold
-      text-foreground
-    "
-          >
+          <h2 className="min-w-0 truncate text-base font-semibold text-foreground">
             {schedule.nama_kelas || "Tanpa nama kelas"}
           </h2>
 
           {schedules.length > 1 && (
-            <span
-              className="
-        shrink-0
-        rounded-full
-        bg-primary-100
-        px-2
-        py-0.5
-        text-[10px]
-        font-medium
-        text-primary-700
-        dark:bg-primary-900/20
-        dark:text-primary-300
-      "
-            >
+            <span className="shrink-0 rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
               {schedules.length} jadwal
             </span>
           )}
         </div>
 
-        <div
-          className="
-            mt-2
-            flex
-            items-center
-            gap-2
-            text-xs
-            text-foreground-secondary
-          "
-        >
+        <div className="mt-2 flex items-center gap-2 text-xs text-foreground-secondary">
           <Clock3 size={14} />
-
           <span>
             {formatTime(getScheduleStartTime(schedule))} -{" "}
             {formatTime(getScheduleEndTime(schedule))} WIB
           </span>
         </div>
+
         {schedules.length > 1 && <GroupedScheduleInfo schedules={schedules} />}
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          {/* {checkInTime ? ( */}
+          {checkInTime && checkOutTime == null ? (
+            <div className="flex items-center gap-1.5 text-green-700">
+              <span className="font-medium">Check-in:</span>
+              <span>{checkInTime} WIB</span>
+            </div>
+          ) : (
+            <span className="text-gray-500"></span>
+          )}
+
+          {/* {checkOutTime && (
+            <div className="flex items-center gap-1.5 text-blue-700">
+              <span className="font-medium">Check-out:</span>
+              <span>{checkOutTime} WIB</span>
+            </div>
+          )} */}
+        </div>
       </div>
 
       <div className="space-y-4 p-4">
-        {/* ====================================
-            COMPLETED
-            ==================================== */}
-
         {completed ? (
           <CompletedAttendanceState attendanceDetail={attendanceDetail} />
         ) : (
           <>
-            {/* ====================================
-                TIME STATUS
-                ==================================== */}
-
             {timeStatus.status === "upcoming" && (
               <UpcomingNotice schedule={schedule} />
             )}
-
             {timeStatus.status === "finished" && !checkedIn && (
               <FinishedNotice />
             )}
-
-            {/* ====================================
-                LOCATION
-                ==================================== */}
 
             {isOffline && (
               <LocationSection
@@ -223,10 +238,6 @@ export default function MentorAttendancePanel({
               />
             )}
 
-            {/* ====================================
-                CAMERA / EVIDENCE
-                ==================================== */}
-
             {isOffline && (
               <EvidenceSection
                 evidence={evidence}
@@ -235,19 +246,15 @@ export default function MentorAttendancePanel({
               />
             )}
 
-            {/* ====================================
-                ACTION
-                ==================================== */}
-
             {checkedIn ? (
               <CheckOutButton
                 submitting={submitting}
                 location={location}
                 evidence={evidence}
                 isOnline={isOnline}
-                canCheckOut={timeStatus.canCheckOut}
-                schedules={schedules}
-                onCheckOut={() => onCheckOut(schedules)}
+                schedules={selectedSchedules}
+                attendanceDetail={checkoutDetail}
+                onCheckOut={() => onCheckOut(selectedSchedules)}
               />
             ) : (
               <CheckInButton
@@ -256,14 +263,10 @@ export default function MentorAttendancePanel({
                 evidence={evidence}
                 isOnline={isOnline}
                 canCheckIn={timeStatus.canCheckIn}
-                schedules={schedules}
-                onCheckIn={() => onCheckIn(schedules)}
+                schedules={selectedSchedules}
+                onCheckIn={() => onCheckIn(selectedSchedules)}
               />
             )}
-
-            {/* ====================================
-                HELPER
-                ==================================== */}
 
             <AttendanceHelper
               location={location}
@@ -279,46 +282,15 @@ export default function MentorAttendancePanel({
   );
 }
 
-/*
- * ==========================================
- * GROUPED SCHEDULE INFO
- * ==========================================
- */
-
+/* Informasi jadwal kolektif */
 function GroupedScheduleInfo({ schedules }) {
   return (
-    <div
-      className="
-        mt-3
-        rounded-xl
-        border
-        border-primary/20
-        bg-primary-50
-        p-3
-        dark:bg-primary-900/10
-      "
-    >
-      <p
-        className="
-          text-[10px]
-          font-semibold
-          uppercase
-          tracking-wide
-          text-primary-700
-          dark:text-primary-300
-        "
-      >
+    <div className="mt-3 rounded-xl border border-primary/20 bg-primary-50 p-3 dark:bg-primary-900/10">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">
         Absensi kolektif
       </p>
 
-      <p
-        className="
-          mt-1
-          text-[11px]
-          leading-relaxed
-          text-foreground-secondary
-        "
-      >
+      <p className="mt-1 text-[11px] leading-relaxed text-foreground-secondary">
         Absensi akan diterapkan ke seluruh jadwal dalam group ini.
       </p>
 
@@ -326,24 +298,9 @@ function GroupedScheduleInfo({ schedules }) {
         {schedules.map((item) => (
           <div
             key={item.id_jadwal}
-            className="
-              flex
-              items-center
-              gap-2
-              text-xs
-              text-foreground
-            "
+            className="flex items-center gap-2 text-xs text-foreground"
           >
-            <span
-              className="
-                h-1.5
-                w-1.5
-                shrink-0
-                rounded-full
-                bg-primary
-              "
-            />
-
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
             <span className="min-w-0 truncate">
               {item.nama_kelas || "Tanpa nama kelas"}
             </span>
@@ -354,29 +311,15 @@ function GroupedScheduleInfo({ schedules }) {
   );
 }
 
-/*
- * ==========================================
- * COMPLETED ATTENDANCE
- * ==========================================
- */
-
+/* Status absensi selesai */
 function CompletedAttendanceState({ attendanceDetail }) {
   return (
-    <div
-      className="
-        rounded-xl
-        border
-        border-success/30
-        bg-success-light
-        p-4
-      "
-    >
+    <div className="rounded-xl border border-success/30 bg-success-light p-4">
       <div className="flex items-start gap-3">
         <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-success" />
 
         <div className="min-w-0">
           <p className="text-sm font-semibold text-success">Absensi selesai</p>
-
           <p className="mt-0.5 text-xs text-foreground-secondary">
             Check-in dan check-out untuk jadwal ini sudah selesai.
           </p>
@@ -400,54 +343,17 @@ function CompletedAttendanceState({ attendanceDetail }) {
   );
 }
 
-/*
- * ==========================================
- * UPCOMING NOTICE
- * ==========================================
- */
-
+/* Informasi jadwal belum dimulai */
 function UpcomingNotice({ schedule }) {
   return (
-    <div
-      className="
-        flex
-        items-start
-        gap-3
-        rounded-xl
-        border
-        border-warning/30
-        bg-warning-light
-        p-3
-      "
-    >
-      <Clock3
-        size={17}
-        className="
-          mt-0.5
-          shrink-0
-          text-warning
-        "
-      />
+    <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning-light p-3">
+      <Clock3 size={17} className="mt-0.5 shrink-0 text-warning" />
 
       <div className="min-w-0">
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-warning
-          "
-        >
+        <p className="text-sm font-semibold text-warning">
           Belum waktunya check-in
         </p>
-
-        <p
-          className="
-            mt-1
-            text-xs
-            leading-relaxed
-            text-foreground-secondary
-          "
-        >
+        <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
           Check-in dapat dilakukan mulai pukul{" "}
           <strong>{formatTime(getScheduleStartTime(schedule))}</strong>.
         </p>
@@ -456,54 +362,20 @@ function UpcomingNotice({ schedule }) {
   );
 }
 
-/*
- * ==========================================
- * FINISHED NOTICE
- * ==========================================
- */
-
+/* Informasi jadwal selesai */
 function FinishedNotice() {
   return (
-    <div
-      className="
-        flex
-        items-start
-        gap-3
-        rounded-xl
-        border
-        border-border
-        bg-background-tertiary
-        p-3
-      "
-    >
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-background-tertiary p-3">
       <AlertCircle
         size={17}
-        className="
-          mt-0.5
-          shrink-0
-          text-foreground-muted
-        "
+        className="mt-0.5 shrink-0 text-foreground-muted"
       />
 
       <div>
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-foreground
-          "
-        >
+        <p className="text-sm font-semibold text-foreground">
           Jadwal telah selesai
         </p>
-
-        <p
-          className="
-            mt-1
-            text-xs
-            leading-relaxed
-            text-foreground-muted
-          "
-        >
+        <p className="mt-1 text-xs leading-relaxed text-foreground-muted">
           Check-in untuk jadwal ini sudah tidak dapat dilakukan.
         </p>
       </div>
@@ -511,12 +383,7 @@ function FinishedNotice() {
   );
 }
 
-/*
- * ==========================================
- * LOCATION SECTION
- * ==========================================
- */
-
+/* Pengambilan lokasi */
 function LocationSection({
   location,
   locationLoading,
@@ -524,54 +391,17 @@ function LocationSection({
   onGetLocation,
 }) {
   return (
-    <div
-      className="
-        rounded-xl
-        border
-        border-border
-        p-3
-      "
-    >
+    <div className="rounded-xl border border-border p-3">
       <div className="flex items-center gap-3">
-        <div
-          className="
-            flex
-            h-9
-            w-9
-            shrink-0
-            items-center
-            justify-center
-            rounded-lg
-            bg-background-tertiary
-            text-foreground-muted
-          "
-        >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background-tertiary text-foreground-muted">
           <MapPin size={17} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p
-            className="
-              text-sm
-              font-medium
-              text-foreground
-            "
-          >
-            Lokasi
-          </p>
-
-          <p
-            className="
-              mt-0.5
-              truncate
-              text-[11px]
-              text-foreground-muted
-            "
-          >
+          <p className="text-sm font-medium text-foreground">Lokasi</p>
+          <p className="mt-0.5 truncate text-[11px] text-foreground-muted">
             {location
-              ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
-                  6,
-                )}`
+              ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
               : "Lokasi belum diambil"}
           </p>
         </div>
@@ -588,7 +418,6 @@ function LocationSection({
           ) : (
             <MapPin size={14} />
           )}
-
           {location ? "Perbarui" : "Ambil"}
         </Button>
       </div>
@@ -596,12 +425,7 @@ function LocationSection({
   );
 }
 
-/*
- * ==========================================
- * EVIDENCE SECTION
- * ==========================================
- */
-
+/* Kamera dan foto evidence */
 function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -609,12 +433,6 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-
-  /*
-   * ==========================================
-   * CREATE PREVIEW FROM EVIDENCE
-   * ==========================================
-   */
 
   useEffect(() => {
     if (!evidence) {
@@ -624,12 +442,9 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
     if (evidence instanceof Blob) {
       const objectUrl = URL.createObjectURL(evidence);
-
       setPreviewUrl(objectUrl);
 
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
+      return () => URL.revokeObjectURL(objectUrl);
     }
 
     if (typeof evidence === "string") {
@@ -637,18 +452,9 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
     }
   }, [evidence]);
 
-  /*
-   * ==========================================
-   * STOP CAMERA
-   * ==========================================
-   */
-
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
@@ -659,64 +465,38 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
     setCameraOpen(false);
   };
 
-  /*
-   * ==========================================
-   * CLEANUP CAMERA
-   * ==========================================
-   */
-
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          track.stop();
-        });
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
-
-  /*
-   * ==========================================
-   * OPEN CAMERA
-   * ==========================================
-   */
 
   const openCamera = async () => {
     setCameraError("");
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Browser tidak mendukung akses kamera langsung.");
-
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: {
-            ideal: "environment",
-          },
-          width: {
-            ideal: 1280,
-          },
-          height: {
-            ideal: 720,
-          },
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         audio: false,
       });
 
       streamRef.current = stream;
-
       setCameraOpen(true);
 
-      /*
-       * Tunggu video element dirender
-       */
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-
           videoRef.current.play().catch(() => {});
         }
       });
@@ -739,27 +519,17 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
     }
   };
 
-  /*
-   * ==========================================
-   * TAKE PHOTO
-   * ==========================================
-   */
-
   const takePhoto = () => {
     const video = videoRef.current;
 
-    if (!video) {
-      return;
-    }
+    if (!video) return;
 
     if (video.videoWidth === 0 || video.videoHeight === 0) {
       setCameraError("Kamera belum siap. Silakan tunggu sebentar.");
-
       return;
     }
 
     const canvas = document.createElement("canvas");
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
@@ -767,23 +537,15 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
     if (!context) {
       setCameraError("Tidak dapat mengambil gambar dari kamera.");
-
       return;
     }
 
-    /*
-     * Ambil frame dari kamera
-     */
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    /*
-     * Convert canvas menjadi File
-     */
     canvas.toBlob(
       (blob) => {
         if (!blob) {
           setCameraError("Gagal membuat file foto.");
-
           return;
         }
 
@@ -792,42 +554,23 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
           lastModified: Date.now(),
         });
 
-        /*
-         * Buat preview
-         */
         const url = URL.createObjectURL(file);
 
         setPreviewUrl((oldUrl) => {
-          if (oldUrl?.startsWith("blob:")) {
-            URL.revokeObjectURL(oldUrl);
-          }
-
+          if (oldUrl?.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
           return url;
         });
 
-        /*
-         * Kirim File ke parent.
-         *
-         * Karena callback lama kemungkinan
-         * menerima event input file, kita
-         * buat object event sederhana.
-         */
         const dataTransfer = new DataTransfer();
-
         dataTransfer.items.add(file);
 
-        const event = {
+        onEvidenceChange({
           target: {
             files: dataTransfer.files,
             value: file.name,
           },
-        };
+        });
 
-        onEvidenceChange(event);
-
-        /*
-         * Tutup kamera setelah foto diambil
-         */
         stopCamera();
       },
       "image/jpeg",
@@ -835,66 +578,22 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
     );
   };
 
-  /*
-   * ==========================================
-   * CLOSE CAMERA
-   * ==========================================
-   */
-
   const handleCloseCamera = () => {
     stopCamera();
     setCameraError("");
   };
 
-  /*
-   * ==========================================
-   * RENDER CAMERA
-   * ==========================================
-   */
-
   if (cameraOpen) {
     return (
-      <div
-        className="
-          overflow-hidden
-          rounded-xl
-          border
-          border-border
-          bg-background-tertiary
-        "
-      >
-        {/* Camera header */}
-
-        <div
-          className="
-            flex
-            items-center
-            justify-between
-            border-b
-            border-border
-            px-3
-            py-3
-          "
-        >
+      <div className="overflow-hidden rounded-xl border border-border bg-background-tertiary">
+        <div className="flex items-center justify-between border-b border-border px-3 py-3">
           <div className="flex items-center gap-2">
-            <div
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                bg-card
-                text-foreground-muted
-              "
-            >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-card text-foreground-muted">
               <Camera size={16} />
             </div>
 
             <div>
               <p className="text-sm font-medium text-foreground">Kamera</p>
-
               <p className="text-[10px] text-foreground-muted">
                 Arahkan kamera ke objek evidence
               </p>
@@ -904,25 +603,12 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
           <button
             type="button"
             onClick={handleCloseCamera}
-            className="
-              flex
-              h-8
-              w-8
-              items-center
-              justify-center
-              rounded-lg
-              text-foreground-muted
-              transition-colors
-              hover:bg-card
-              hover:text-foreground
-            "
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-card hover:text-foreground"
             aria-label="Tutup kamera"
           >
             <X size={17} />
           </button>
         </div>
-
-        {/* Live camera */}
 
         <div className="relative bg-black">
           <video
@@ -930,102 +616,28 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
             autoPlay
             playsInline
             muted
-            className="
-              aspect-video
-              w-full
-              object-cover
-            "
+            className="aspect-video w-full object-cover"
           />
 
-          {/* Camera frame */}
-
-          <div
-            className="
-              pointer-events-none
-              absolute
-              inset-0
-              flex
-              items-center
-              justify-center
-            "
-          >
-            <div
-              className="
-                h-[65%]
-                w-[70%]
-                rounded-2xl
-                border-2
-                border-white/70
-                shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]
-              "
-            />
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="h-[65%] w-[70%] rounded-2xl border-2 border-white/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]" />
           </div>
 
-          {/* Bottom camera controls */}
-
-          <div
-            className="
-              absolute
-              inset-x-0
-              bottom-0
-              flex
-              justify-center
-              bg-gradient-to-t
-              from-black/70
-              to-transparent
-              px-4
-              pb-5
-              pt-12
-            "
-          >
+          <div className="absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/70 to-transparent px-4 pb-5 pt-12">
             <button
               type="button"
               onClick={takePhoto}
               disabled={submitting}
-              className="
-                flex
-                h-16
-                w-16
-                items-center
-                justify-center
-                rounded-full
-                border-4
-                border-white
-                bg-white/20
-                shadow-lg
-                transition-transform
-                active:scale-95
-                disabled:opacity-50
-              "
+              className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 shadow-lg transition-transform active:scale-95 disabled:opacity-50"
               aria-label="Ambil foto"
             >
-              <span
-                className="
-                  h-11
-                  w-11
-                  rounded-full
-                  bg-white
-                "
-              />
+              <span className="h-11 w-11 rounded-full bg-white" />
             </button>
           </div>
         </div>
 
-        {/* Camera error */}
-
         {cameraError && (
-          <div
-            className="
-              border-t
-              border-danger/20
-              bg-danger-light
-              px-3
-              py-2.5
-              text-xs
-              leading-relaxed
-              text-danger
-            "
-          >
+          <div className="border-t border-danger/20 bg-danger-light px-3 py-2.5 text-xs leading-relaxed text-danger">
             {cameraError}
           </div>
         )}
@@ -1033,192 +645,58 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
     );
   }
 
-  /*
-   * ==========================================
-   * NORMAL EVIDENCE VIEW
-   * ==========================================
-   */
-
   return (
-    <div
-      className="
-        rounded-xl
-        border
-        border-border
-        p-3
-      "
-    >
-      {/* Header */}
-
+    <div className="rounded-xl border border-border p-3">
       <div className="flex items-start gap-3">
-        <div
-          className="
-            flex
-            h-9
-            w-9
-            shrink-0
-            items-center
-            justify-center
-            rounded-lg
-            bg-background-tertiary
-            text-foreground-muted
-          "
-        >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background-tertiary text-foreground-muted">
           <Camera size={17} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p
-            className="
-              text-sm
-              font-medium
-              text-foreground
-            "
-          >
-            Foto evidence
-          </p>
-
-          <p
-            className="
-              mt-0.5
-              truncate
-              text-[11px]
-              text-foreground-muted
-            "
-          >
+          <p className="text-sm font-medium text-foreground">Foto evidence</p>
+          <p className="mt-0.5 truncate text-[11px] text-foreground-muted">
             {evidence?.name || "Belum mengambil foto"}
           </p>
         </div>
       </div>
 
-      {/* ======================================
-          PREVIEW
-          ====================================== */}
-
       {previewUrl && (
-        <div
-          className="
-            relative
-            mt-3
-            overflow-hidden
-            rounded-xl
-            border
-            border-border
-            bg-black
-          "
-        >
+        <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-black">
           <img
             src={previewUrl}
             alt="Preview foto evidence"
-            className="
-              aspect-video
-              w-full
-              object-cover
-            "
+            className="aspect-video w-full object-cover"
           />
-
-          <div
-            className="
-              pointer-events-none
-              absolute
-              inset-x-0
-              bottom-0
-              bg-gradient-to-t
-              from-black/70
-              to-transparent
-              px-3
-              pb-3
-              pt-10
-            "
-          >
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-10">
             <p className="text-[10px] font-medium text-white">Foto evidence</p>
           </div>
         </div>
       )}
 
-      {/* ======================================
-          CAMERA BUTTON
-          ====================================== */}
-
       <button
         type="button"
         onClick={openCamera}
         disabled={submitting}
-        className="
-          mt-3
-          flex
-          w-full
-          items-center
-          justify-center
-          gap-2
-          rounded-lg
-          border
-          border-border
-          bg-card
-          px-3
-          py-2.5
-          text-xs
-          font-medium
-          text-foreground-secondary
-          transition-colors
-          hover:bg-background-tertiary
-          disabled:cursor-not-allowed
-          disabled:opacity-50
-        "
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-background-tertiary disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Camera size={15} />
-
         {evidence ? "Ambil Ulang Foto" : "Buka Kamera"}
       </button>
 
-      {/* ======================================
-          ERROR
-          ====================================== */}
-
       {cameraError && (
-        <div
-          className="
-            mt-2
-            rounded-lg
-            border
-            border-danger/20
-            bg-danger-light
-            px-3
-            py-2
-            text-[10px]
-            leading-relaxed
-            text-danger
-          "
-        >
+        <div className="mt-2 rounded-lg border border-danger/20 bg-danger-light px-3 py-2 text-[10px] leading-relaxed text-danger">
           {cameraError}
         </div>
       )}
 
-      {/* ======================================
-          HELPER
-          ====================================== */}
-
-      <p
-        className="
-          mt-2
-          text-center
-          text-[10px]
-          leading-relaxed
-          text-foreground-muted
-        "
-      >
+      <p className="mt-2 text-center text-[10px] leading-relaxed text-foreground-muted">
         Kamera akan dibuka langsung di halaman ini.
       </p>
     </div>
   );
 }
 
-/*
- * ==========================================
- * CHECK-IN BUTTON
- * ==========================================
- */
-
+/* Tombol check-in */
 function CheckInButton({
   submitting,
   location,
@@ -1229,7 +707,6 @@ function CheckInButton({
   onCheckIn,
 }) {
   const missingRequiredData = !isOnline && (!location || !evidence);
-
   const label =
     schedules.length > 1 ? `Check-in ${schedules.length} Jadwal` : "Check-in";
 
@@ -1241,18 +718,12 @@ function CheckInButton({
       disabled={submitting || !canCheckIn || missingRequiredData}
     >
       <LogIn size={16} />
-
       {submitting ? "Memproses..." : label}
     </Button>
   );
 }
 
-/*
- * ==========================================
- * CHECK-OUT BUTTON
- * ==========================================
- */
-
+/* Tombol check-out */
 function CheckOutButton({
   submitting,
   location,
@@ -1260,34 +731,78 @@ function CheckOutButton({
   isOnline,
   canCheckOut,
   schedules = [],
+  attendanceDetail,
   onCheckOut,
 }) {
+  const { available, remainingMs } = getCheckOutAvailability(attendanceDetail);
+
   const missingRequiredData = !isOnline && (!location || !evidence);
 
   const label =
     schedules.length > 1 ? `Check-out ${schedules.length} Jadwal` : "Check-out";
 
-  return (
-    <Button
-      type="button"
-      variant="danger"
-      className="w-full"
-      onClick={onCheckOut}
-      disabled={submitting || !canCheckOut || missingRequiredData}
-    >
-      <LogOut size={16} />
+  // Pertahankan validasi jadwal lama, tetapi jangan biarkan
+  // status waktu jadwal menghalangi checkout setelah batas waktu terpenuhi.
+  const isEnabled = available && !submitting && !missingRequiredData;
 
-      {submitting ? "Memproses..." : label}
-    </Button>
+  const remainingMinutes =
+    remainingMs === null ? null : Math.ceil(remainingMs / 60000);
+
+  const statusMessage =
+    remainingMs === null
+      ? "Waktu checkout belum dapat ditentukan"
+      : available
+        ? "Anda sudah bisa checkout"
+        : `Anda bisa checkout ${remainingMinutes} menit lagi`;
+
+  const handleCheckOut = () => {
+    if (!isEnabled) return;
+
+    // Tetap gunakan handler lama agar proses pemilihan jadwal
+    // dan pengiriman data checkout tidak berubah.
+    onCheckOut();
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant="danger"
+        className="w-full"
+        onClick={handleCheckOut}
+        disabled={!isEnabled}
+      >
+        <LogOut size={16} />
+        {submitting ? "Memproses..." : label}
+      </Button>
+
+      {!submitting && (
+        <p
+          className={`text-sm ${
+            available ? "text-green-600" : "text-amber-600"
+          }`}
+          role="status"
+        >
+          {statusMessage}
+        </p>
+      )}
+
+      {missingRequiredData && (
+        <p className="text-sm text-red-600">
+          Lengkapi lokasi dan bukti mengajar sebelum checkout.
+        </p>
+      )}
+
+      {schedules.length === 0 && (
+        <p className="text-sm text-red-600">
+          Tidak ada jadwal yang dipilih untuk checkout.
+        </p>
+      )}
+    </div>
   );
 }
 
-/*
- * ==========================================
- * ATTENDANCE HELPER
- * ==========================================
- */
-
+/* Pesan bantuan absensi */
 function AttendanceHelper({
   location,
   evidence,
@@ -1315,14 +830,7 @@ function AttendanceHelper({
   }
 
   return (
-    <p
-      className="
-        text-center
-        text-[10px]
-        leading-relaxed
-        text-foreground-muted
-      "
-    >
+    <p className="text-center text-[10px] leading-relaxed text-foreground-muted">
       {message}
     </p>
   );
