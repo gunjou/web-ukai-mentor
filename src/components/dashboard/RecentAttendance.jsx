@@ -218,7 +218,7 @@ function AttendanceRow({ attendance }) {
 
       <td className="px-5 py-3.5">
         <span className="text-sm text-foreground-secondary">
-          {attendance.nama_kelas || "-"}
+          {attendance.nama_kelas || attendance.nama_kelompok || "-"}
         </span>
       </td>
 

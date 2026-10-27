@@ -39,7 +39,7 @@ function formatWibTime(dateTime) {
   if (!dateTime) return null;
 
   const date = new Date(
-    /(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}+07:00`,
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}+07:00`
   );
 
   if (Number.isNaN(date.getTime())) return null;
@@ -65,11 +65,11 @@ function getWibNow() {
   }).formatToParts(new Date());
 
   const time = Object.fromEntries(
-    parts.map(({ type, value }) => [type, value]),
+    parts.map(({ type, value }) => [type, value])
   );
 
   return new Date(
-    `${time.year}-${time.month}-${time.day}T${time.hour}:${time.minute}:${time.second}+07:00`,
+    `${time.year}-${time.month}-${time.day}T${time.hour}:${time.minute}:${time.second}+07:00`
   ).getTime();
 }
 
@@ -100,7 +100,7 @@ function getCheckOutAvailability(attendanceDetail) {
   // tergantung mana yang tercapai lebih dahulu.
   const earliestCheckOut = Math.min(
     checkInTime + MINIMUM_TEACHING_DURATION,
-    scheduleEnd,
+    scheduleEnd
   );
 
   const remainingMs = Math.max(0, earliestCheckOut - getWibNow());
@@ -177,7 +177,7 @@ export default function MentorAttendancePanel({
 
         <div className="flex items-center gap-2">
           <h2 className="min-w-0 truncate text-base font-semibold text-foreground">
-            {schedule.nama_kelas || "Tanpa nama kelas"}
+            {schedule.nama_kelas || schedule.nama_kelompok || "-"}
           </h2>
 
           {schedules.length > 1 && (
@@ -401,7 +401,9 @@ function LocationSection({
           <p className="text-sm font-medium text-foreground">Lokasi</p>
           <p className="mt-0.5 truncate text-[11px] text-foreground-muted">
             {location
-              ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+              ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
+                  6
+                )}`
               : "Lokasi belum diambil"}
           </p>
         </div>
@@ -505,7 +507,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
 
       if (error?.name === "NotAllowedError") {
         setCameraError(
-          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan.",
+          "Akses kamera ditolak. Izinkan kamera pada browser untuk melanjutkan."
         );
       } else if (error?.name === "NotFoundError") {
         setCameraError("Kamera tidak ditemukan pada perangkat ini.");
@@ -513,7 +515,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         setCameraError("Kamera sedang digunakan aplikasi lain.");
       } else {
         setCameraError(
-          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera.",
+          "Tidak dapat membuka kamera. Pastikan browser memiliki izin kamera."
         );
       }
     }
@@ -574,7 +576,7 @@ function EvidenceSection({ evidence, submitting, onEvidenceChange }) {
         stopCamera();
       },
       "image/jpeg",
-      0.9,
+      0.9
     );
   };
 
@@ -752,8 +754,8 @@ function CheckOutButton({
     remainingMs === null
       ? "Waktu checkout belum dapat ditentukan"
       : available
-        ? "Anda sudah bisa checkout"
-        : `Anda bisa checkout ${remainingMinutes} menit lagi`;
+      ? "Anda sudah bisa checkout"
+      : `Anda bisa checkout ${remainingMinutes} menit lagi`;
 
   const handleCheckOut = () => {
     if (!isEnabled) return;

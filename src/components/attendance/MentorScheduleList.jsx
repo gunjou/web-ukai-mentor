@@ -137,12 +137,12 @@ function ScheduleGroupItem({
   const firstSchedule = schedules[0];
 
   const selected = schedules.some(
-    (schedule) => schedule.id_jadwal === selectedSchedule?.id_jadwal,
+    (schedule) => schedule.id_jadwal === selectedSchedule?.id_jadwal
   );
 
   const start = createDateTime(
     firstSchedule,
-    getScheduleStartTime(firstSchedule),
+    getScheduleStartTime(firstSchedule)
   );
 
   const end = createDateTime(firstSchedule, getScheduleEndTime(firstSchedule));
@@ -324,7 +324,7 @@ function ScheduleGroupItem({
                         }
                       `}
                     >
-                      {schedule.nama_kelas || "Tanpa nama kelas"}
+                      {schedule.nama_kelas || schedule.nama_kelompok || "-"}
                     </p>
 
                     {isSelected && (

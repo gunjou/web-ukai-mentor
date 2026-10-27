@@ -77,7 +77,7 @@ export default function AttendanceSchedulePicker({
           value={selectedSchedule?.id_jadwal || ""}
           onChange={(event) => {
             const schedule = schedules.find(
-              (item) => String(item.id_jadwal) === event.target.value,
+              (item) => String(item.id_jadwal) === event.target.value
             );
 
             onScheduleChange(schedule || null);
@@ -108,8 +108,10 @@ export default function AttendanceSchedulePicker({
 
             return (
               <option key={schedule.id_jadwal} value={schedule.id_jadwal}>
-                {schedule.nama_kelas || "Tanpa nama kelas"} -{" "}
-                {formatDate(display.date)} - {formatTime(display.startTime)} -{" "}
+                {schedule.nama_kelas ||
+                  schedule.nama_kelompok ||
+                  "Tanpa nama kelas"}{" "}
+                - {formatDate(display.date)} - {formatTime(display.startTime)} -{" "}
                 {formatTime(display.endTime)}
               </option>
             );

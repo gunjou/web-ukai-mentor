@@ -87,13 +87,13 @@ export default function ScheduleCalendar({
       if (!map.has(id)) {
         map.set(id, {
           value: id,
-          label: schedule.nama_kelas || `Kelas ${id}`,
+          label: schedule.nama_kelas || schedule.nama_kelompok || `Kelas ${id}`,
         });
       }
     });
 
     return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
+      a.label.localeCompare(b.label)
     );
   }, [allSchedules, schedules]);
 
@@ -156,7 +156,7 @@ export default function ScheduleCalendar({
 
   function goPreviousMonth() {
     setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
+      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1)
     );
 
     setSelectedDate(null);
@@ -164,7 +164,7 @@ export default function ScheduleCalendar({
 
   function goNextMonth() {
     setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
+      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1)
     );
 
     setSelectedDate(null);
@@ -408,7 +408,7 @@ export default function ScheduleCalendar({
 
                   index === 0 && "text-danger",
 
-                  index === 6 && "text-primary-600 dark:text-primary-400",
+                  index === 6 && "text-primary-600 dark:text-primary-400"
                 )}
               >
                 <span
@@ -502,7 +502,7 @@ export default function ScheduleCalendar({
                     // ================================================================
 
                     isSelected &&
-                      "ring-1 ring-inset ring-primary-500/40 dark:ring-primary-400/30",
+                      "ring-1 ring-inset ring-primary-500/40 dark:ring-primary-400/30"
                   )}
                 >
                   {/* =================================
@@ -549,7 +549,7 @@ export default function ScheduleCalendar({
 
                         isSelected &&
                           !isToday &&
-                          "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300",
+                          "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
                       )}
                     >
                       {day.getDate()}

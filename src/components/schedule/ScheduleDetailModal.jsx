@@ -237,7 +237,7 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
                 text-foreground-muted
               "
             >
-              Kelas
+              Kelas / Kelompok Belajar
             </p>
 
             <h3
@@ -249,7 +249,7 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
                 text-foreground
               "
             >
-              {schedule.nama_kelas || "Tanpa kelas"}
+              {schedule.nama_kelas || schedule.nama_kelompok || "-"}
             </h3>
           </div>
         </div>

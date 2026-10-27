@@ -55,7 +55,9 @@ export default function ScheduleEvent({ schedule, onClick }) {
     <button
       type="button"
       onClick={() => onClick?.(schedule)}
-      title={`${formatTime(startTime)} - ${formatTime(endTime)} WIB • ${classes.length} kelas`}
+      title={`${formatTime(startTime)} - ${formatTime(endTime)} WIB • ${
+        classes.length
+      } kelas`}
       className={`
         group
         relative
@@ -169,7 +171,7 @@ export default function ScheduleEvent({ schedule, onClick }) {
                   leading-tight
                 "
               >
-                • {item.nama_kelas || "Tanpa kelas"}
+                • {item.nama_kelas || item.nama_kelompok || "-"}
               </p>
             ))}
 

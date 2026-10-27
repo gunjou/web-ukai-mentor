@@ -100,7 +100,7 @@ export default function AttendanceOverview({ data = [], loading = false }) {
                     return label;
                   }
 
-                  return `${label} • ${item.nama_kelas}`;
+                  return `${label} • ${item.nama_kelas || item.nama_kelompok}`;
                 }}
               />
 

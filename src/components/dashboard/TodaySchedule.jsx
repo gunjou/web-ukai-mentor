@@ -144,7 +144,7 @@ function ScheduleItem({ schedule }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-foreground">
-            {schedule.nama_kelas || "-"}
+            {schedule.nama_kelas || schedule.nama_kelompok || "-"}
           </p>
 
           {isToday && (
