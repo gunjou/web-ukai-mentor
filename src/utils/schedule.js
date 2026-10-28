@@ -67,3 +67,40 @@ export function isRescheduled(schedule) {
     schedule.waktu_selesai_reschedule,
   );
 }
+
+/*
+ * Kelompokkan jadwal flat (per kelas) menjadi format group
+ * yang sama dengan GET /jadwal/group:
+ * tanggal + waktu_mulai + waktu_selesai -> classes[]
+ */
+export function groupSchedulesByTime(schedules = []) {
+  const map = new Map();
+
+  schedules.forEach((schedule) => {
+    const tanggal = getScheduleDate(schedule);
+    const waktuMulai = getScheduleStartTime(schedule);
+    const waktuSelesai = getScheduleEndTime(schedule);
+
+    if (!tanggal) {
+      return;
+    }
+
+    const key = `${tanggal}|${waktuMulai}|${waktuSelesai}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        id_jadwal: schedule.id_jadwal,
+        tanggal,
+        tanggal_efektif: tanggal,
+        waktu_mulai: waktuMulai,
+        waktu_selesai: waktuSelesai,
+        waktu_mulai_efektif: waktuMulai,
+        classes: [],
+      });
+    }
+
+    map.get(key).classes.push(schedule);
+  });
+
+  return Array.from(map.values());
+}

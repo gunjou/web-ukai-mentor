@@ -17,3 +17,13 @@ export function updatePassword(passwords) {
     body: JSON.stringify(passwords),
   });
 }
+
+export async function getWaliKelasStatus() {
+  const response = await api("/profile/wali-kelas");
+
+  return {
+    isWaliKelas: response?.data?.is_wali_kelas === true,
+    totalKelas: response?.data?.total_kelas ?? 0,
+    kelas: Array.isArray(response?.data?.kelas) ? response.data.kelas : [],
+  };
+}

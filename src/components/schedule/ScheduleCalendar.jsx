@@ -29,8 +29,26 @@ export default function ScheduleCalendar({
   onResetFilters,
 
   onScheduleClick,
+
+  /*
+   * Opsional (dipakai mode wali kelas):
+   *
+   * - month          : bulan aktif dikontrol parent
+   * - onMonthChange  : dipanggil saat bulan berganti
+   * - classOptions   : opsi kelas dari parent
+   * - summaryByDate  : { "YYYY-MM-DD": { total_jadwal, total_kelas } }
+   *                    jika diisi, sel kalender menampilkan ringkasan
+   */
+  month,
+  onMonthChange,
+  classOptions: classOptionsProp,
+  summaryByDate = null,
 }) {
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [internalDate, setInternalDate] = useState(() => new Date());
+
+  const currentDate = month ?? internalDate;
+
+  const isSummaryMode = Boolean(summaryByDate);
 
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -73,6 +91,10 @@ export default function ScheduleCalendar({
    */
 
   const classOptions = useMemo(() => {
+    if (classOptionsProp) {
+      return classOptionsProp;
+    }
+
     const source = allSchedules.length > 0 ? allSchedules : schedules;
 
     const map = new Map();
@@ -95,7 +117,7 @@ export default function ScheduleCalendar({
     return Array.from(map.values()).sort((a, b) =>
       a.label.localeCompare(b.label)
     );
-  }, [allSchedules, schedules]);
+  }, [classOptionsProp, allSchedules, schedules]);
 
   /*
    * ==========================================
@@ -154,17 +176,25 @@ export default function ScheduleCalendar({
    * ==========================================
    */
 
+  function changeMonth(nextDate) {
+    if (!month) {
+      setInternalDate(nextDate);
+    }
+
+    onMonthChange?.(nextDate);
+  }
+
   function goPreviousMonth() {
-    setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1)
+    changeMonth(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
     );
 
     setSelectedDate(null);
   }
 
   function goNextMonth() {
-    setCurrentDate(
-      (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1)
+    changeMonth(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
     );
 
     setSelectedDate(null);
@@ -173,7 +203,7 @@ export default function ScheduleCalendar({
   function goToday() {
     const now = new Date();
 
-    setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    changeMonth(new Date(now.getFullYear(), now.getMonth(), 1));
 
     setSelectedDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   }
@@ -459,6 +489,8 @@ export default function ScheduleCalendar({
 
               const daySchedules = scheduleMap[dateKey] || [];
 
+              const daySummary = isSummaryMode ? summaryByDate[dateKey] : null;
+
               const isToday = isSameDate(day, today);
 
               const isSelected = selectedDate && isSameDate(day, selectedDate);
@@ -574,6 +606,38 @@ export default function ScheduleCalendar({
                       </span>
                     )}
                   </div>
+
+                  {/* =================================
+                      SUMMARY (WALI KELAS, TANPA FILTER)
+                      ================================= */}
+
+                  {daySummary && (
+                    <div
+                      className="
+                        rounded-md
+                        border
+                        border-primary-200
+                        bg-primary-50
+                        px-1.5
+                        py-1
+                        text-[10px]
+                        leading-tight
+                        text-primary-700
+                        dark:border-primary-800
+                        dark:bg-primary-900/30
+                        dark:text-primary-300
+                        sm:text-[11px]
+                      "
+                    >
+                      <div className="font-semibold">
+                        {daySummary.total_jadwal} jadwal
+                      </div>
+
+                      <div className="text-foreground-muted">
+                        {daySummary.total_kelas} kelas
+                      </div>
+                    </div>
+                  )}
 
                   {/* =================================
                       EVENTS

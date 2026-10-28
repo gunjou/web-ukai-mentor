@@ -387,15 +387,18 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
           <StatusBadge status={schedule.status} />
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          variant={rescheduled ? "outline" : "default"}
-          onClick={() => onReschedule?.(schedule)}
-        >
-          <CalendarClock size={14} />
-          {rescheduled ? "Ubah Reschedule" : "Reschedule"}
-        </Button>
+        {/* Tombol disembunyikan jika parent tidak mengizinkan reschedule */}
+        {onReschedule && (
+          <Button
+            type="button"
+            size="sm"
+            variant={rescheduled ? "outline" : "default"}
+            onClick={() => onReschedule(schedule)}
+          >
+            <CalendarClock size={14} />
+            {rescheduled ? "Ubah Reschedule" : "Reschedule"}
+          </Button>
+        )}
       </div>
     </div>
   );
