@@ -25,6 +25,10 @@ const pageTitles = {
     title: "Schedules",
     description: "Lihat dan kelola jadwal",
   },
+  "/schedule-swaps": {
+    title: "Tukar Jadwal",
+    description: "Lihat dan tanggapi request pertukaran jadwal",
+  },
   "/shifts": {
     title: "Shift",
     description: "Kelola shift dan jam kerja",
@@ -91,7 +95,7 @@ export default function Header({ onMobileMenu, onProfile, onSettings }) {
 
       {/* Right */}
       <div className="flex shrink-0 items-center gap-1.5">
-        <NotificationButton count={5} />
+        <NotificationButton />
 
         <ThemeToggle size="sm" />
 

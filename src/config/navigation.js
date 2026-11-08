@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   CalendarDays,
+  ArrowLeftRight,
   Clock3,
   Users,
   UserCheck,
@@ -27,6 +28,11 @@ export const mainNavigation = [
     label: "Schedules",
     href: "/schedules",
     icon: CalendarDays,
+  },
+  {
+    label: "Tukar Jadwal",
+    href: "/schedule-swaps",
+    icon: ArrowLeftRight,
   },
   {
     label: "Attendance",
