@@ -389,6 +389,8 @@ export default function useMentorAttendance() {
 
       setCheckInData(response);
       setEvidence(null);
+      // Check-out wajib mengambil lokasi baru, bukan koordinat check-in.
+      setLocation(null);
 
       await loadAttendanceStatus(selectedSchedule);
 
@@ -451,6 +453,13 @@ export default function useMentorAttendance() {
         setSubmitting(true);
 
         for (const schedule of groupSchedules) {
+          // Saat percobaan ulang, jadwal yang sudah berhasil dilewati.
+          const status = await getMentorAttendanceStatus(schedule.id_jadwal);
+
+          if (status?.data?.check_in_at) {
+            continue;
+          }
+
           const payload = {
             id_jadwal: schedule.id_jadwal,
           };
@@ -471,6 +480,8 @@ export default function useMentorAttendance() {
         }
 
         setEvidence(null);
+        // Check-out wajib mengambil lokasi baru, bukan koordinat check-in.
+        setLocation(null);
 
         await loadAttendanceStatus(selectedSchedule);
 
@@ -615,7 +626,21 @@ export default function useMentorAttendance() {
       try {
         setSubmitting(true);
 
+        let notCheckedIn = 0;
+
         for (const schedule of groupSchedules) {
+          // Saat percobaan ulang, jadwal yang sudah selesai dilewati.
+          const status = await getMentorAttendanceStatus(schedule.id_jadwal);
+
+          if (status?.data?.check_out_at) {
+            continue;
+          }
+
+          if (!status?.data?.check_in_at) {
+            notCheckedIn += 1;
+            continue;
+          }
+
           const payload = {
             id_jadwal: schedule.id_jadwal,
           };
@@ -639,9 +664,15 @@ export default function useMentorAttendance() {
 
         await loadAttendanceStatus(selectedSchedule);
 
-        toast.success(
-          `Check-out berhasil untuk ${groupSchedules.length} jadwal.`,
-        );
+        if (notCheckedIn > 0) {
+          toast.warning(
+            `${notCheckedIn} jadwal dilewati karena belum check-in. Hubungi admin.`,
+          );
+        } else {
+          toast.success(
+            `Check-out berhasil untuk ${groupSchedules.length} jadwal.`,
+          );
+        }
       } catch (err) {
         console.error("GROUP CHECK-OUT ERROR:", err);
 

@@ -16,6 +16,7 @@ import Card from "../ui/Card";
 import Button from "../ui/Button";
 import {
   formatTime,
+  getScheduleDate,
   getScheduleEndTime,
   getScheduleStartTime,
 } from "../../utils/schedule";
@@ -75,8 +76,8 @@ function getWibNow() {
 
 function getCheckOutAvailability(attendanceDetail) {
   const checkInTime = parseWibDateTime(attendanceDetail?.check_in_at);
-  const scheduleDate = attendanceDetail?.tanggal;
-  const scheduleEndTime = attendanceDetail?.waktu_selesai;
+  const scheduleDate = getScheduleDate(attendanceDetail);
+  const scheduleEndTime = getScheduleEndTime(attendanceDetail);
 
   if (!checkInTime || !scheduleDate || !scheduleEndTime) {
     return {
