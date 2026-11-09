@@ -12,6 +12,7 @@ import ScheduleDetailModal from "../components/schedule/ScheduleDetailModal";
 import ScheduleRescheduleModal from "../components/schedule/ScheduleRescheduleModal";
 
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 import {
   getSchedulesGroup,
@@ -19,7 +20,11 @@ import {
 } from "../services/scheduleService";
 import { getWaliKelasStatus } from "../services/profileService";
 
-import { getMeetingType, groupSchedulesByTime } from "../utils/schedule";
+import {
+  getMeetingType,
+  groupSchedulesByTime,
+  isOwnMentorSchedule,
+} from "../utils/schedule";
 import { toDateKey } from "../utils/calendar";
 import { exportWaliKelasSchedulePdf } from "../utils/schedulePdf";
 
@@ -44,6 +49,7 @@ function getFirstDayOfMonth(date = new Date()) {
 
 export default function SchedulePage() {
   const toast = useToast();
+  const { user } = useAuth();
 
   /*
    * ==========================================
@@ -60,6 +66,8 @@ export default function SchedulePage() {
   const [classFilter, setClassFilter] = useState("all");
 
   const [meetingType, setMeetingType] = useState("all");
+
+  const [showOwnSchedulesOnly, setShowOwnSchedulesOnly] = useState(false);
 
   const [selectedSchedule, setSelectedSchedule] = useState(null);
 
@@ -164,7 +172,7 @@ export default function SchedulePage() {
    * LOAD DATA WALI KELAS
    * ==========================================
    *
-   * - Semua kelas  : hanya ringkasan per tanggal (meta.per_tanggal)
+   * - Semua kelas  : ringkasan per tanggal dan detail semua kelas wali
    * - Kelas dipilih: daftar jadwal kelas tersebut
    */
 
@@ -184,8 +192,21 @@ export default function SchedulePage() {
         setWaliKelasMeta(null);
         setSchedules(groupSchedulesByTime(response.data));
       } else {
+        const scheduleResponses = await Promise.all(
+          waliKelasClassOptions.map((option) =>
+            getSchedulesWaliKelas({
+              bulan: toDateKey(currentMonth).slice(0, 7),
+              idPaketkelas: option.value,
+            }),
+          ),
+        );
+
         setWaliKelasMeta(response.meta);
-        setSchedules([]);
+        setSchedules(
+          groupSchedulesByTime(
+            scheduleResponses.flatMap((scheduleResponse) => scheduleResponse.data),
+          ),
+        );
       }
     } catch (err) {
       console.error("Failed to load wali kelas schedules:", err);
@@ -201,7 +222,7 @@ export default function SchedulePage() {
     } finally {
       setLoading(false);
     }
-  }, [classFilter, currentMonth, toast]);
+  }, [classFilter, currentMonth, toast, waliKelasClassOptions]);
 
   const loadSchedules =
     isWaliKelas === true ? loadWaliKelasSchedules : loadGroupSchedules;
@@ -235,6 +256,49 @@ export default function SchedulePage() {
       return null;
     }
 
+    if (showOwnSchedulesOnly) {
+      const map = {};
+
+      schedules.forEach((group) => {
+        const ownClasses = (group.classes || []).filter((item) =>
+          isOwnMentorSchedule(item, user?.nama),
+        );
+
+        if (!ownClasses.length) {
+          return;
+        }
+
+        const key = toDateKey(group.tanggal_efektif || group.tanggal);
+
+        if (!key) {
+          return;
+        }
+
+        if (!map[key]) {
+          map[key] = {
+            tanggal: key,
+            total_jadwal: 0,
+            total_kelas: 0,
+            kelasIds: new Set(),
+          };
+        }
+
+        map[key].total_jadwal += ownClasses.length;
+        ownClasses.forEach((item) => {
+          if (item.id_paketkelas) {
+            map[key].kelasIds.add(String(item.id_paketkelas));
+          }
+        });
+      });
+
+      Object.values(map).forEach((item) => {
+        item.total_kelas = item.kelasIds.size;
+        delete item.kelasIds;
+      });
+
+      return map;
+    }
+
     const map = {};
 
     (waliKelasMeta.per_tanggal || []).forEach((item) => {
@@ -246,7 +310,25 @@ export default function SchedulePage() {
     });
 
     return map;
-  }, [isWaliKelas, waliKelasMeta]);
+  }, [isWaliKelas, waliKelasMeta, showOwnSchedulesOnly, schedules, user?.nama]);
+
+  const ownScheduleTotals = useMemo(() => {
+    const ownSchedules = schedules.flatMap((group) =>
+      (group.classes || []).filter((item) =>
+        isOwnMentorSchedule(item, user?.nama),
+      ),
+    );
+
+    return {
+      totalSchedules: ownSchedules.length,
+      totalClasses: new Set(
+        ownSchedules
+          .map((item) => item.id_paketkelas)
+          .filter(Boolean)
+          .map(String),
+      ).size,
+    };
+  }, [schedules, user?.nama]);
 
   /*
    * ==========================================
@@ -260,11 +342,22 @@ export default function SchedulePage() {
      * tipe pertemuan difilter per kelas di dalam group.
      */
     if (isWaliKelas) {
+      const filteredByOwner = showOwnSchedulesOnly
+        ? schedules
+            .map((group) => ({
+              ...group,
+              classes: (group.classes || []).filter((item) =>
+                isOwnMentorSchedule(item, user?.nama),
+              ),
+            }))
+            .filter((group) => group.classes.length > 0)
+        : schedules;
+
       if (meetingType === "all") {
-        return schedules;
+        return filteredByOwner;
       }
 
-      return schedules
+      return filteredByOwner
         .map((group) => ({
           ...group,
           classes: group.classes.filter(
@@ -284,7 +377,14 @@ export default function SchedulePage() {
 
       return matchesClass && matchesMeetingType;
     });
-  }, [isWaliKelas, schedules, classFilter, meetingType]);
+  }, [
+    isWaliKelas,
+    schedules,
+    classFilter,
+    meetingType,
+    showOwnSchedulesOnly,
+    user?.nama,
+  ]);
 
   /*
    * ==========================================
@@ -308,6 +408,14 @@ export default function SchedulePage() {
     setDetailModalOpen(true);
   }
 
+  function handleSummaryClick(day, daySchedules) {
+    setSelectedSchedule({
+      tanggal: toDateKey(day),
+      groups: daySchedules,
+    });
+    setDetailModalOpen(true);
+  }
+
   function handleCloseDetail() {
     setDetailModalOpen(false);
     setSelectedSchedule(null);
@@ -325,6 +433,21 @@ export default function SchedulePage() {
     setDetailModalOpen(false);
 
     setRescheduleModalOpen(true);
+  }
+
+  function canRescheduleWaliKelasSchedule(schedule) {
+    return waliKelasClassOptions.some(
+      (option) => String(option.value) === String(schedule?.id_paketkelas),
+    );
+  }
+
+  function handleWaliKelasReschedule(schedule) {
+    if (!canRescheduleWaliKelasSchedule(schedule)) {
+      toast.error("Anda hanya dapat me-reschedule jadwal kelas wali Anda.");
+      return;
+    }
+
+    handleReschedule(schedule);
   }
 
   function handleCloseReschedule() {
@@ -558,21 +681,37 @@ export default function SchedulePage() {
                 sm:px-4
               "
             >
-              Total{" "}
-              <span className="font-semibold text-foreground">
-                {waliKelasMeta?.total ?? 0} jadwal
-              </span>{" "}
-              dari{" "}
-              <span className="font-semibold text-foreground">
-                {waliKelasMeta?.total_kelas ?? 0} kelas
-              </span>{" "}
-              bulan ini. Pilih kelas untuk melihat detail jadwal.
+              {showOwnSchedulesOnly ? (
+                <>
+                  Jadwal mengajar Anda:{" "}
+                  <span className="font-semibold text-foreground">
+                    {ownScheduleTotals.totalSchedules} jadwal
+                  </span>{" "}
+                  dari{" "}
+                  <span className="font-semibold text-foreground">
+                    {ownScheduleTotals.totalClasses} kelas
+                  </span>{" "}
+                  bulan ini.
+                </>
+              ) : (
+                <>
+                  Total{" "}
+                  <span className="font-semibold text-foreground">
+                    {waliKelasMeta?.total ?? 0} jadwal
+                  </span>{" "}
+                  dari{" "}
+                  <span className="font-semibold text-foreground">
+                    {waliKelasMeta?.total_kelas ?? 0} kelas
+                  </span>{" "}
+                  bulan ini. Pilih kelas untuk melihat detail jadwal.
+                </>
+              )}
             </div>
           )}
 
           <ScheduleCalendar
             schedules={filteredSchedules}
-            allSchedules={schedules}
+            allSchedules={showOwnSchedulesOnly ? filteredSchedules : schedules}
             month={isWaliKelas ? currentMonth : undefined}
             onMonthChange={isWaliKelas ? setCurrentMonth : undefined}
             classOptions={isWaliKelas ? waliKelasClassOptions : undefined}
@@ -583,6 +722,11 @@ export default function SchedulePage() {
             onMeetingTypeChange={setMeetingType}
             onResetFilters={handleResetFilters}
             onScheduleClick={handleScheduleClick}
+            onSummaryClick={handleSummaryClick}
+            currentMentorName={user?.nama}
+            showOwnSchedulesFilter={isWaliKelas === true}
+            showOwnSchedulesOnly={showOwnSchedulesOnly}
+            onShowOwnSchedulesOnlyChange={setShowOwnSchedulesOnly}
           />
         </Card>
       )}
@@ -595,7 +739,13 @@ export default function SchedulePage() {
         open={detailModalOpen}
         schedule={selectedSchedule}
         onClose={handleCloseDetail}
-        onReschedule={isWaliKelas ? undefined : handleReschedule}
+        onReschedule={
+          isWaliKelas ? handleWaliKelasReschedule : handleReschedule
+        }
+        canRescheduleSchedule={
+          isWaliKelas ? canRescheduleWaliKelasSchedule : undefined
+        }
+        currentMentorName={user?.nama}
       />
 
       {/* =====================================

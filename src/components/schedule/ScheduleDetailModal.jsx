@@ -16,6 +16,7 @@ import {
   getScheduleStartTime,
   getScheduleEndTime,
   isRescheduled,
+  isOwnMentorSchedule,
 } from "../../utils/schedule";
 
 import Button from "../ui/Button";
@@ -26,27 +27,38 @@ export default function ScheduleDetailModal({
   schedule,
   onClose,
   onReschedule,
+  canRescheduleSchedule,
+  currentMentorName,
 }) {
   if (!schedule) {
     return null;
   }
 
-  const classes = schedule.classes || [];
+  const groups = Array.isArray(schedule.groups) ? schedule.groups : [schedule];
+  const totalClasses = groups.reduce(
+    (total, group) => total + (group.classes?.length || 0),
+    0
+  );
 
-  if (!classes.length) {
+  if (!totalClasses) {
     return null;
   }
 
-  const groupDate = schedule.tanggal;
+  const groupDate = schedule.tanggal || groups[0]?.tanggal;
   const groupStartTime = schedule.waktu_mulai;
   const groupEndTime = schedule.waktu_selesai;
+  const isMultiSchedule = Array.isArray(schedule.groups);
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Detail Jadwal"
-      description={`${classes.length} kelas dalam satu waktu pertemuan`}
+      description={
+        isMultiSchedule
+          ? `${groups.length} jadwal, ${totalClasses} kelas`
+          : `${totalClasses} kelas dalam satu waktu pertemuan`
+      }
       icon={CalendarDays}
       size="md"
       contentClassName="max-h-[70vh]"
@@ -112,17 +124,19 @@ export default function ScheduleDetailModal({
               {formatScheduleDate(groupDate)}
             </p>
 
-            <p
-              className="
-                mt-1
-                text-xs
-                text-foreground-secondary
-              "
-            >
-              {formatTime(groupStartTime)}
-              {" - "}
-              {formatTime(groupEndTime)} WIB
-            </p>
+            {!isMultiSchedule && (
+              <p
+                className="
+                  mt-1
+                  text-xs
+                  text-foreground-secondary
+                "
+              >
+                {formatTime(groupStartTime)}
+                {" - "}
+                {formatTime(groupEndTime)} WIB
+              </p>
+            )}
           </div>
 
           <span
@@ -137,7 +151,7 @@ export default function ScheduleDetailModal({
               text-foreground-secondary
             "
           >
-            {classes.length} kelas
+            {totalClasses} kelas
           </span>
         </div>
       </div>
@@ -147,13 +161,27 @@ export default function ScheduleDetailModal({
           ===================================== */}
 
       <div className="mt-4 space-y-3">
-        {classes.map((item, index) => (
-          <ScheduleClassCard
-            key={item.id_jadwal}
-            schedule={item}
-            index={index}
-            onReschedule={onReschedule}
-          />
+        {groups.map((group, groupIndex) => (
+          <div key={`${group.id_jadwal || groupIndex}`}>
+            {isMultiSchedule && (
+              <p className="mb-2 text-xs font-semibold text-foreground-secondary">
+                {formatTime(group.waktu_mulai)} -{" "}
+                {formatTime(group.waktu_selesai)} WIB
+              </p>
+            )}
+            <div className="space-y-3">
+              {(group.classes || []).map((item, index) => (
+                <ScheduleClassCard
+                  key={item.id_jadwal}
+                  schedule={item}
+                  index={index}
+                  onReschedule={onReschedule}
+                  canReschedule={canRescheduleSchedule?.(item) ?? true}
+                  isOwnSchedule={isOwnMentorSchedule(item, currentMentorName)}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </Modal>
@@ -166,7 +194,13 @@ export default function ScheduleDetailModal({
  * ==========================================
  */
 
-function ScheduleClassCard({ schedule, index, onReschedule }) {
+function ScheduleClassCard({
+  schedule,
+  index,
+  onReschedule,
+  canReschedule,
+  isOwnSchedule,
+}) {
   const meetingType = getMeetingType(schedule);
   const rescheduled = isRescheduled(schedule);
 
@@ -251,6 +285,11 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
             >
               {schedule.nama_kelas || schedule.nama_kelompok || "-"}
             </h3>
+            {isOwnSchedule && (
+              <span className="mt-1 inline-flex rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+                Jadwal mengajar Anda
+              </span>
+            )}
           </div>
         </div>
 
@@ -262,6 +301,11 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
           ===================================== */}
 
       <div className="mt-4 space-y-2">
+        <InfoRow
+          icon={FileText}
+          label="Nama Mentor"
+          value={schedule.nama_mentor || "-"}
+        />
         <InfoRow
           icon={CalendarDays}
           label="Tanggal efektif"
@@ -388,7 +432,7 @@ function ScheduleClassCard({ schedule, index, onReschedule }) {
         </div>
 
         {/* Tombol disembunyikan jika parent tidak mengizinkan reschedule */}
-        {onReschedule && (
+        {onReschedule && canReschedule && (
           <Button
             type="button"
             size="sm"

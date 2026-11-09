@@ -6,9 +6,14 @@ import {
   getScheduleStartTime,
   getScheduleEndTime,
   isRescheduled,
+  isOwnMentorSchedule,
 } from "../../utils/schedule";
 
-export default function ScheduleEvent({ schedule, onClick }) {
+export default function ScheduleEvent({
+  schedule,
+  onClick,
+  currentMentorName,
+}) {
   const classes = schedule?.classes || [];
 
   if (!classes.length) {
@@ -43,6 +48,9 @@ export default function ScheduleEvent({ schedule, onClick }) {
    * Reschedule cukup dicek dari seluruh classes.
    */
   const rescheduled = classes.some((item) => isRescheduled(item));
+  const teachesOwnClass = classes.some((item) =>
+    isOwnMentorSchedule(item, currentMentorName),
+  );
 
   /*
    * Jangan tampilkan semua kelas di calendar cell.
@@ -161,6 +169,11 @@ export default function ScheduleEvent({ schedule, onClick }) {
               ===================================== */}
 
           <div className="mt-1.5 space-y-0.5">
+            {teachesOwnClass && (
+              <p className="truncate text-[9px] font-bold">
+                Jadwal mengajar Anda
+              </p>
+            )}
             {visibleClasses.map((item) => (
               <p
                 key={item.id_jadwal}

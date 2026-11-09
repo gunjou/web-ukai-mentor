@@ -68,6 +68,19 @@ export function isRescheduled(schedule) {
   );
 }
 
+export function isOwnMentorSchedule(schedule, mentorName) {
+  const normalize = (value) => String(value || "").trim().toLocaleLowerCase();
+  const currentMentorName = normalize(mentorName);
+
+  if (!currentMentorName) {
+    return false;
+  }
+
+  return [schedule?.nickname_mentor, schedule?.nama_mentor]
+    .map(normalize)
+    .some((name) => name && name === currentMentorName);
+}
+
 /*
  * Kelompokkan jadwal flat (per kelas) menjadi format group
  * yang sama dengan GET /jadwal/group:

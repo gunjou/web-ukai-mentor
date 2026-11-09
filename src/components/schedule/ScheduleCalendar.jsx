@@ -16,6 +16,7 @@ import {
 } from "../../utils/calendar";
 
 import { cn } from "../../utils/cn";
+import { isOwnMentorSchedule } from "../../utils/schedule";
 
 export default function ScheduleCalendar({
   schedules = [],
@@ -29,6 +30,11 @@ export default function ScheduleCalendar({
   onResetFilters,
 
   onScheduleClick,
+  onSummaryClick,
+  currentMentorName,
+  showOwnSchedulesFilter = false,
+  showOwnSchedulesOnly = false,
+  onShowOwnSchedulesOnlyChange,
 
   /*
    * Opsional (dipakai mode wali kelas):
@@ -170,6 +176,25 @@ export default function ScheduleCalendar({
     return map;
   }, [schedules]);
 
+  const allScheduleMap = useMemo(() => {
+    const map = {};
+
+    allSchedules.forEach((schedule) => {
+      const date = schedule?.tanggal_efektif || schedule?.tanggal;
+      const key = date ? toDateKey(date) : "";
+
+      if (key) {
+        if (!map[key]) {
+          map[key] = [];
+        }
+
+        map[key].push(schedule);
+      }
+    });
+
+    return map;
+  }, [allSchedules]);
+
   /*
    * ==========================================
    * NAVIGATION
@@ -186,7 +211,7 @@ export default function ScheduleCalendar({
 
   function goPreviousMonth() {
     changeMonth(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
     );
 
     setSelectedDate(null);
@@ -194,7 +219,7 @@ export default function ScheduleCalendar({
 
   function goNextMonth() {
     changeMonth(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
     );
 
     setSelectedDate(null);
@@ -403,6 +428,50 @@ export default function ScheduleCalendar({
               onClassChange={onClassChange}
               onMeetingTypeChange={onMeetingTypeChange}
               onResetFilters={handleResetFilters}
+              trailingAction={
+                showOwnSchedulesFilter && (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-label="Filter jadwal mengajar saya"
+                    aria-checked={showOwnSchedulesOnly}
+                    onClick={() =>
+                      onShowOwnSchedulesOnlyChange?.(!showOwnSchedulesOnly)
+                    }
+                    className={cn(
+                      "inline-flex min-h-10 shrink-0 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-colors sm:min-h-8 sm:justify-start",
+                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
+                      showOwnSchedulesOnly
+                        ? "border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-card"
+                        : "border-border bg-card hover:bg-background-tertiary",
+                    )}
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-xs font-semibold text-foreground dark:text-primary-300">
+                        Jadwal mengajar saya
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+                        showOwnSchedulesOnly
+                          ? "bg-primary-500"
+                          : "bg-gray-300 dark:bg-gray-600",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                          showOwnSchedulesOnly
+                            ? "translate-x-4"
+                            : "translate-x-0",
+                        )}
+                      />
+                    </span>
+                  </button>
+                )
+              }
             />
           </div>
         </div>
@@ -490,6 +559,12 @@ export default function ScheduleCalendar({
               const daySchedules = scheduleMap[dateKey] || [];
 
               const daySummary = isSummaryMode ? summaryByDate[dateKey] : null;
+              const allDaySchedules = allScheduleMap[dateKey] || [];
+              const hasOwnSchedule = allDaySchedules.some((group) =>
+                (group.classes || []).some((schedule) =>
+                  isOwnMentorSchedule(schedule, currentMentorName)
+                )
+              );
 
               const isToday = isSameDate(day, today);
 
@@ -498,10 +573,8 @@ export default function ScheduleCalendar({
               const isCurrentMonth = day.getMonth() === currentDate.getMonth();
 
               return (
-                <button
-                  type="button"
+                <div
                   key={dateKey}
-                  onClick={() => handleDateClick(day)}
                   className={cn(
                     "relative",
                     "min-w-0",
@@ -511,11 +584,6 @@ export default function ScheduleCalendar({
                     "text-left",
                     "transition-colors",
                     "hover:bg-background-tertiary",
-                    "focus:outline-none",
-                    "focus-visible:ring-2",
-                    "focus-visible:ring-inset",
-                    "focus-visible:ring-primary-500",
-
                     "sm:min-h-[145px]",
                     "sm:p-1.5",
 
@@ -550,11 +618,15 @@ export default function ScheduleCalendar({
                       gap-1
                     "
                   >
-                    <span
+                    <button
+                      type="button"
+                      onClick={() => handleDateClick(day)}
+                      aria-label={`Pilih tanggal ${day.getDate()} ${monthLabel}`}
                       className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
                         "text-[11px] font-medium",
                         "sm:h-7 sm:w-7 sm:text-xs",
+                        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
 
                         // ================================================================
                         // TANGGAL DI LUAR BULAN AKTIF
@@ -585,7 +657,7 @@ export default function ScheduleCalendar({
                       )}
                     >
                       {day.getDate()}
-                    </span>
+                    </button>
 
                     {/* Schedule count */}
 
@@ -612,8 +684,13 @@ export default function ScheduleCalendar({
                       ================================= */}
 
                   {daySummary && (
-                    <div
+                    <button
+                      type="button"
+                      onClick={() => onSummaryClick?.(day, allDaySchedules)}
+                      aria-label={`Lihat ${daySummary.total_jadwal} jadwal dan ${daySummary.total_kelas} kelas`}
                       className="
+                        w-full
+                        cursor-pointer
                         rounded-md
                         border
                         border-primary-200
@@ -627,42 +704,58 @@ export default function ScheduleCalendar({
                         dark:bg-primary-900/30
                         dark:text-primary-300
                         sm:text-[11px]
+                        text-left
+                        transition-colors
+                        hover:border-primary-400
+                        hover:bg-primary-100
+                        focus:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-primary-500
+                        dark:hover:bg-primary-900/50
                       "
                     >
-                      <div className="font-semibold">
+                      <span className="block font-semibold">
                         {daySummary.total_jadwal} jadwal
-                      </div>
+                      </span>
 
-                      <div className="text-foreground-muted">
+                      <span className="block text-foreground-muted">
                         {daySummary.total_kelas} kelas
-                      </div>
-                    </div>
+                      </span>
+                      {hasOwnSchedule && !showOwnSchedulesOnly && (
+                        <span className="mt-1 block font-semibold text-primary-700 dark:text-primary-300">
+                          Anda mengajar
+                        </span>
+                      )}
+                    </button>
                   )}
 
                   {/* =================================
                       EVENTS
                       ================================= */}
 
-                  <div
-                    className="
-                      space-y-1
-                      sm:space-y-1.5
-                    "
-                  >
-                    {daySchedules.slice(0, 4).map((schedule) => (
-                      <ScheduleEvent
-                        key={schedule.id_jadwal}
-                        schedule={schedule}
-                        onClick={onScheduleClick}
-                      />
-                    ))}
-                  </div>
+                  {!isSummaryMode && (
+                    <div
+                      className="
+                        space-y-1
+                        sm:space-y-1.5
+                      "
+                    >
+                      {daySchedules.slice(0, 4).map((schedule) => (
+                        <ScheduleEvent
+                          key={schedule.id_jadwal}
+                          schedule={schedule}
+                          onClick={onScheduleClick}
+                          currentMentorName={currentMentorName}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* =================================
                       MORE
                       ================================= */}
 
-                  {daySchedules.length > 4 && (
+                  {!isSummaryMode && daySchedules.length > 4 && (
                     <div
                       className="
                         mt-1
@@ -676,7 +769,7 @@ export default function ScheduleCalendar({
                       + {daySchedules.length - 4} jadwal lainnya
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
