@@ -22,6 +22,7 @@ import { getWaliKelasStatus } from "../services/profileService";
 
 import {
   getMeetingType,
+  getScheduleDate,
   groupSchedulesByTime,
   isOwnMentorSchedule,
 } from "../utils/schedule";
@@ -82,9 +83,7 @@ export default function SchedulePage() {
    */
   const [isWaliKelas, setIsWaliKelas] = useState(null);
 
-  const [currentMonth, setCurrentMonth] = useState(() =>
-    getFirstDayOfMonth(),
-  );
+  const [currentMonth, setCurrentMonth] = useState(() => getFirstDayOfMonth());
 
   const [waliKelasMeta, setWaliKelasMeta] = useState(null);
 
@@ -182,32 +181,41 @@ export default function SchedulePage() {
       setError("");
 
       const idPaketkelas = classFilter === "all" ? null : classFilter;
+      const bulan = toDateKey(currentMonth).slice(0, 7);
 
-      const response = await getSchedulesWaliKelas({
-        bulan: toDateKey(currentMonth).slice(0, 7),
-        idPaketkelas,
-      });
+      // Jadwal yang diajar sendiri (online = kelas, offline = kelompok)
+      const ownGroups = await getSchedulesGroup();
+      const ownSchedules = ownGroups
+        .flatMap((group) => group.classes || [])
+        .filter(
+          (item) =>
+            String(getScheduleDate(item) || "").slice(0, 7) === bulan &&
+            (!idPaketkelas || String(item.id_paketkelas) === idPaketkelas),
+        )
+        .map((item) => ({ ...item, is_own: true }));
+      const ownIds = new Set(ownSchedules.map((item) => item.id_jadwal));
 
-      if (idPaketkelas) {
-        setWaliKelasMeta(null);
-        setSchedules(groupSchedulesByTime(response.data));
-      } else {
+      const response = await getSchedulesWaliKelas({ bulan, idPaketkelas });
+
+      let waliSchedules = response.data;
+
+      if (!idPaketkelas) {
         const scheduleResponses = await Promise.all(
           waliKelasClassOptions.map((option) =>
-            getSchedulesWaliKelas({
-              bulan: toDateKey(currentMonth).slice(0, 7),
-              idPaketkelas: option.value,
-            }),
+            getSchedulesWaliKelas({ bulan, idPaketkelas: option.value }),
           ),
         );
 
-        setWaliKelasMeta(response.meta);
-        setSchedules(
-          groupSchedulesByTime(
-            scheduleResponses.flatMap((scheduleResponse) => scheduleResponse.data),
-          ),
-        );
+        waliSchedules = scheduleResponses.flatMap((item) => item.data);
       }
+
+      setWaliKelasMeta(idPaketkelas ? null : response.meta);
+      setSchedules(
+        groupSchedulesByTime([
+          ...waliSchedules.filter((item) => !ownIds.has(item.id_jadwal)),
+          ...ownSchedules,
+        ]),
+      );
     } catch (err) {
       console.error("Failed to load wali kelas schedules:", err);
 
@@ -256,57 +264,48 @@ export default function SchedulePage() {
       return null;
     }
 
-    if (showOwnSchedulesOnly) {
-      const map = {};
-
-      schedules.forEach((group) => {
-        const ownClasses = (group.classes || []).filter((item) =>
-          isOwnMentorSchedule(item, user?.nama),
-        );
-
-        if (!ownClasses.length) {
-          return;
-        }
-
-        const key = toDateKey(group.tanggal_efektif || group.tanggal);
-
-        if (!key) {
-          return;
-        }
-
-        if (!map[key]) {
-          map[key] = {
-            tanggal: key,
-            total_jadwal: 0,
-            total_kelas: 0,
-            kelasIds: new Set(),
-          };
-        }
-
-        map[key].total_jadwal += ownClasses.length;
-        ownClasses.forEach((item) => {
-          if (item.id_paketkelas) {
-            map[key].kelasIds.add(String(item.id_paketkelas));
-          }
-        });
-      });
-
-      Object.values(map).forEach((item) => {
-        item.total_kelas = item.kelasIds.size;
-        delete item.kelasIds;
-      });
-
-      return map;
-    }
-
     const map = {};
 
-    (waliKelasMeta.per_tanggal || []).forEach((item) => {
-      const key = toDateKey(item?.tanggal);
+    schedules.forEach((group) => {
+      const ownClasses = (group.classes || []).filter(
+        (item) =>
+          !showOwnSchedulesOnly || isOwnMentorSchedule(item, user?.nama),
+      );
 
-      if (key) {
-        map[key] = item;
+      if (!ownClasses.length) {
+        return;
       }
+
+      const key = toDateKey(group.tanggal_efektif || group.tanggal);
+
+      if (!key) {
+        return;
+      }
+
+      if (!map[key]) {
+        map[key] = {
+          tanggal: key,
+          total_jadwal: 0,
+          total_kelas: 0,
+          kelasIds: new Set(),
+        };
+      }
+
+      map[key].total_jadwal += ownClasses.length;
+      ownClasses.forEach((item) => {
+        const targetId = item.id_kelompok
+          ? `k${item.id_kelompok}`
+          : item.id_paketkelas;
+
+        if (targetId) {
+          map[key].kelasIds.add(String(targetId));
+        }
+      });
+    });
+
+    Object.values(map).forEach((item) => {
+      item.total_kelas = item.kelasIds.size;
+      delete item.kelasIds;
     });
 
     return map;
@@ -435,15 +434,14 @@ export default function SchedulePage() {
     setRescheduleModalOpen(true);
   }
 
+  // Wali kelas hanya boleh reschedule jadwal yang ia ajar sendiri
   function canRescheduleWaliKelasSchedule(schedule) {
-    return waliKelasClassOptions.some(
-      (option) => String(option.value) === String(schedule?.id_paketkelas),
-    );
+    return isOwnMentorSchedule(schedule, user?.nama);
   }
 
   function handleWaliKelasReschedule(schedule) {
     if (!canRescheduleWaliKelasSchedule(schedule)) {
-      toast.error("Anda hanya dapat me-reschedule jadwal kelas wali Anda.");
+      toast.error("Anda hanya dapat me-reschedule jadwal yang Anda ajar.");
       return;
     }
 

@@ -72,6 +72,10 @@ export function isOwnMentorSchedule(schedule, mentorName) {
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase();
   const currentMentorName = normalize(mentorName);
 
+  if (schedule?.is_own) {
+    return true;
+  }
+
   if (!currentMentorName) {
     return false;
   }
