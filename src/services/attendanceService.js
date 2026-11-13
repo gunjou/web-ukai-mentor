@@ -203,3 +203,33 @@ export async function mentorCheckOutGroup(schedules = [], payload = {}) {
 
   return results;
 }
+
+/*
+ * ==========================================
+ * REKAP ABSENSI PESERTA PER KELAS (WALI KELAS)
+ * bulan: "YYYY-MM", kosong = keseluruhan
+ * ==========================================
+ */
+
+export function getRekapAbsensiKelas(id_paketkelas, bulan) {
+  const query = bulan ? `?${new URLSearchParams({ bulan })}` : "";
+
+  return api(`/absensi/rekap/kelas/${id_paketkelas}${query}`);
+}
+
+export async function downloadRekapAbsensiKelasPdf(id_paketkelas, bulan, filename) {
+  const query = bulan ? `?${new URLSearchParams({ bulan })}` : "";
+
+  const blob = await api(`/absensi/rekap/kelas/${id_paketkelas}/export${query}`, {
+    responseType: "blob",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}

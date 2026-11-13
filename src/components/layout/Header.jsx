@@ -43,6 +43,10 @@ const pageTitles = {
   "/tryout-arrears": {
     title: "Tryout Arrears",
   },
+  "/class-recap": {
+    title: "Rekap Kelas",
+    description: "Rekap kehadiran peserta kelas yang diwalikan",
+  },
   "/leave": {
     title: "Izin & Cuti",
     description: "Kelola pengajuan izin dan cuti",

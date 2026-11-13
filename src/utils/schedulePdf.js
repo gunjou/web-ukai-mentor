@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import { drawPdfHeader } from "./pdfHeader";
+
 import {
   getMeetingType,
   getScheduleDate,
@@ -95,29 +97,6 @@ function setFont(doc, style = "normal", size = 9, color = COLORS.text) {
   doc.setFont("helvetica", style);
   doc.setFontSize(size);
   doc.setTextColor(...color);
-}
-
-function drawHeader(doc, pageWidth) {
-  setFont(doc, "bold", 14, COLORS.primary);
-
-  doc.text("SYNDROME UKAI", pageWidth / 2, 14, {
-    align: "center",
-  });
-
-  setFont(doc, "normal", 7, [90, 90, 90]);
-
-  doc.text(
-    "Email: admin@ukaisyndrome.id | Phone: +62 8895946963",
-    pageWidth / 2,
-    18,
-    {
-      align: "center",
-    },
-  );
-
-  doc.setLineWidth(0.3);
-  doc.setDrawColor(...COLORS.primary);
-  doc.line(14, 20, pageWidth - 14, 20);
 }
 
 function drawInfo(doc, { bulan, className, meetingType }) {
@@ -348,7 +327,10 @@ export function exportWaliKelasSchedulePdf({
 
   const sortedSchedules = sortSchedules(schedules);
 
-  drawHeader(doc, pageWidth);
+  drawPdfHeader(doc, pageWidth, {
+    title: "JADWAL PERTEMUAN WALI KELAS",
+    subtitle: `Periode ${formatMonth(bulan)}`,
+  });
 
   let y = drawInfo(doc, { bulan, className, meetingType });
 

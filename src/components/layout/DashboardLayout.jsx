@@ -1,14 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import ProfileSettingsModal from "./ProfileSettingsModal";
 
+import { getWaliKelasStatus } from "../../services/profileService";
+
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [accountView, setAccountView] = useState(null);
+  const [isWaliKelas, setIsWaliKelas] = useState(false);
+
+  // Menu khusus wali kelas; gagal cek = menu disembunyikan
+  useEffect(() => {
+    let active = true;
+
+    getWaliKelasStatus()
+      .then((result) => active && setIsWaliKelas(result.isWaliKelas))
+      .catch(() => active && setIsWaliKelas(false));
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function openAccountView(view) {
     setMobileMenu(false);
@@ -23,6 +39,7 @@ export default function DashboardLayout() {
       <div className="hidden h-full shrink-0 lg:block">
         <Sidebar
           collapsed={collapsed}
+          isWaliKelas={isWaliKelas}
           onToggle={() => setCollapsed((current) => !current)}
           onSettings={() => openAccountView("settings")}
         />
@@ -57,6 +74,7 @@ export default function DashboardLayout() {
       >
         <Sidebar
           collapsed={false}
+          isWaliKelas={isWaliKelas}
           onToggle={() => setMobileMenu(false)}
           onSettings={() => openAccountView("settings")}
         />

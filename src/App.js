@@ -12,6 +12,7 @@ import PesertaPage from "./pages/PesertaPage";
 import TryoutArrearsPage from "./pages/TryoutArrearsPage";
 import MateriProgressPage from "./pages/MateriProgressPage";
 import ScheduleSwapPage from "./pages/ScheduleSwapPage";
+import ClassRecapPage from "./pages/ClassRecapPage";
 
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -75,6 +76,8 @@ function AppRoutes() {
           <Route path="/tryout-arrears" element={<TryoutArrearsPage />} />
 
           <Route path="/materi-progress" element={<MateriProgressPage />} />
+
+          <Route path="/class-recap" element={<ClassRecapPage />} />
         </Route>
       </Route>
 

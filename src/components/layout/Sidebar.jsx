@@ -5,7 +5,12 @@ import SidebarItem from "./SidebarItem";
 
 import { cn } from "../../utils/cn";
 
-export default function Sidebar({ collapsed = false, onToggle, onSettings }) {
+export default function Sidebar({
+  collapsed = false,
+  isWaliKelas = false,
+  onToggle,
+  onSettings,
+}) {
   return (
     <aside
       className={cn(
@@ -64,9 +69,11 @@ export default function Sidebar({ collapsed = false, onToggle, onSettings }) {
         </p>
 
         <div className="space-y-1">
-          {mainNavigation.map((item) => (
-            <SidebarItem key={item.href} item={item} collapsed={collapsed} />
-          ))}
+          {mainNavigation
+            .filter((item) => !item.waliKelasOnly || isWaliKelas)
+            .map((item) => (
+              <SidebarItem key={item.href} item={item} collapsed={collapsed} />
+            ))}
         </div>
       </nav>
 

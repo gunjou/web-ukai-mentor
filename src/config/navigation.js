@@ -40,6 +40,13 @@ export const mainNavigation = [
     icon: UserCheck,
   },
   {
+    label: "Rekap Kelas",
+    href: "/class-recap",
+    icon: FileBarChart,
+    // Hanya tampil untuk mentor yang menjadi wali kelas
+    waliKelasOnly: true,
+  },
+  {
     label: "Participants",
     href: "/participants",
     icon: Users,

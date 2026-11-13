@@ -6,6 +6,8 @@ export default function ParticipantClassPicker({
   classes = [],
   selectedClass,
   onClassChange,
+  description = "Pilih kelas untuk melihat daftar peserta.",
+  placeholder,
 }) {
   return (
     <Card>
@@ -35,7 +37,7 @@ export default function ParticipantClassPicker({
             </h3>
 
             <p className="mt-1 text-xs text-foreground-muted">
-              Pilih kelas untuk melihat daftar peserta.
+              {description}
             </p>
           </div>
         </div>
@@ -63,6 +65,12 @@ export default function ParticipantClassPicker({
               focus:ring-primary-500/20
             "
           >
+            {placeholder && classes.length > 0 && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+
             {classes.length === 0 ? (
               <option value="">Tidak ada kelas</option>
             ) : (
