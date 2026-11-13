@@ -405,9 +405,13 @@ function LocationSection({
               ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(
                   6
                 )}`
+              : locationLoading
+              ? "Mencari sinyal GPS terbaik..."
               : "Lokasi belum diambil"}
           </p>
         </div>
+
+        {location && <AccuracyBadge accuracy={location.accuracy} />}
 
         <Button
           type="button"
@@ -425,6 +429,27 @@ function LocationSection({
         </Button>
       </div>
     </div>
+  );
+}
+
+/* Titik mentor menjadi acuan peserta, jadi tampilkan seberapa presisi titiknya. */
+function AccuracyBadge({ accuracy }) {
+  const level =
+    accuracy <= 30
+      ? { label: "Presisi", className: "bg-green-500/15 text-green-600" }
+      : accuracy <= 100
+      ? { label: "Cukup", className: "bg-amber-500/15 text-amber-600" }
+      : accuracy <= 300
+      ? { label: "Lemah", className: "bg-orange-500/15 text-orange-600" }
+      : { label: "Tidak valid", className: "bg-red-500/15 text-red-600" };
+
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${level.className}`}
+      title="Akurasi GPS"
+    >
+      ±{Math.round(accuracy)} m · {level.label}
+    </span>
   );
 }
 

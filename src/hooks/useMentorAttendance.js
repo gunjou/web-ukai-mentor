@@ -12,6 +12,12 @@ import {
 import { getScheduleStartTime, getScheduleEndTime } from "../utils/schedule";
 import { getWibNow } from "../utils/time";
 
+// Batas akurasi sama dengan backend; > APPROXIMATE biasanya izin "lokasi perkiraan".
+const MAX_GPS_ACCURACY = 300;
+const APPROXIMATE_GPS_ACCURACY = 500;
+const GOOD_GPS_ACCURACY = 20;
+const GPS_SAMPLING_MS = 12000;
+
 export default function useMentorAttendance() {
   const toast = useToast();
 
@@ -704,22 +710,68 @@ export default function useMentorAttendance() {
     }
 
     setLocationLoading(true);
+    setLocation(null);
 
-    navigator.geolocation.getCurrentPosition(
+    /*
+     * Titik mentor menjadi acuan semua peserta, jadi pantau GPS beberapa
+     * detik dan pakai pembacaan paling presisi, bukan pembacaan pertama.
+     */
+    let best = null;
+    let watchId = null;
+    let timer = null;
+    let done = false;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      navigator.geolocation.clearWatch(watchId);
+      clearTimeout(timer);
+      setLocationLoading(false);
+
+      if (!best) {
+        toast.error("Lokasi tidak terbaca. Aktifkan GPS lalu coba lagi.");
+        return;
+      }
+
+      if (best.accuracy > MAX_GPS_ACCURACY) {
+        setLocation(null);
+        toast.error(
+          best.accuracy > APPROXIMATE_GPS_ACCURACY
+            ? "Browser hanya memberi lokasi perkiraan. Aktifkan 'Lokasi akurat/Precise Location' untuk browser ini lalu ambil ulang."
+            : "Akurasi GPS terlalu rendah. Pindah ke dekat jendela/area terbuka lalu ambil ulang.",
+        );
+        return;
+      }
+
+      toast.success(`Lokasi diperoleh (akurasi ±${Math.round(best.accuracy)} m).`);
+    };
+
+    timer = setTimeout(finish, GPS_SAMPLING_MS);
+
+    watchId = navigator.geolocation.watchPosition(
       (position) => {
-        setLocation({
+        const reading = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
-        });
+        };
 
-        setLocationLoading(false);
+        if (best && reading.accuracy >= best.accuracy) return;
 
-        toast.success("Lokasi berhasil diperoleh.");
+        best = reading;
+        setLocation(reading);
+
+        if (reading.accuracy <= GOOD_GPS_ACCURACY) finish();
       },
       (error) => {
+        // Error setelah ada pembacaan bagus tidak perlu menggagalkan pengambilan.
+        if (done || (best && error.code !== 1)) return;
+
+        done = true;
         console.error("GPS ERROR:", error);
 
+        navigator.geolocation.clearWatch(watchId);
+        clearTimeout(timer);
         setLocationLoading(false);
 
         let message = "Gagal mendapatkan lokasi.";
