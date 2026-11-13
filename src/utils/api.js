@@ -1,7 +1,7 @@
 import { clearAuthSession, getAccessToken } from "./auth";
 
-const API_URL = "http://127.0.0.1:5001";
-// const API_URL = process.env.REACT_APP_API_URL;
+// const API_URL = "http://127.0.0.1:5001";
+const API_URL = process.env.REACT_APP_API_URL;
 
 export async function api(endpoint, options = {}) {
   const token = getAccessToken();
